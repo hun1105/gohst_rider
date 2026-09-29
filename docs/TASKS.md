@@ -9,5 +9,5 @@
 | T-002 | PROTOCOL.md 현행 필드 채우기 (코드 추출 확정) | claude | done | main | - |
 | T-003 | GodViewSidebarHUD.cs | antigravity | todo | agent/antigravity | handoff/T-003.md |
 | T-004 | RobotWarningVisualizer.cs | antigravity | todo | agent/antigravity | handoff/T-004.md |
-| T-005 | 3-Step Escape 상태머신 (로봇 노드) | claude | todo | agent/claude | - |
-| T-006 | cmd_vel 워치독 (0.5s 무입력 정지) | claude | todo | agent/claude | - |
+| T-005 | 3-Step Escape 상태머신 (로봇 노드) | claude | done | agent/claude | - |
+| T-006 | cmd_vel 워치독 (0.5s 무입력 정지) | claude | done | agent/claude | - |

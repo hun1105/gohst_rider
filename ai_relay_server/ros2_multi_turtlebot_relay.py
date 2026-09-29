@@ -23,6 +23,28 @@ from websockets.server import serve
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("MultiTurtleBotRelay")
 
+# --- T-006: cmd_vel 워치독 ---
+CMD_VEL_WATCHDOG_TIMEOUT_S = 0.5      # 텔레옵 무입력 허용 시간 (초)
+
+# --- T-005: 3-Step Escape ---
+ESCAPE_STOP_HOLD_S = 1.0              # Step 1: 정지 유지 시간 (초)
+ESCAPE_BACKUP_SPEED = -0.10           # Step 2: 후진 선속도 (m/s)
+ESCAPE_BACKUP_DURATION_S = 1.5        # Step 2: 후진 시간 (초) → 약 0.15m
+ESCAPE_ROTATE_SPEED = 1.0             # Step 3: 회전 각속도 (rad/s, +좌회전)
+ESCAPE_ROTATE_ANGLE_RAD = math.pi / 2 # Step 3: 회전 목표각 (rad)
+ESCAPE_MAX_ATTEMPTS = 3               # 연속 회피 시도 한도 → 초과 시 FAULT
+
+
+class EscapeState:
+    IDLE = "IDLE"
+    STOP = "STOP"
+    BACKUP = "BACKUP"
+    ROTATE = "ROTATE"
+    FAULT = "FAULT"
+
+    # 상태머신이 tb1 속도를 점유하는 상태 (조작자 입력·워치독 배제)
+    ACTIVE = (STOP, BACKUP, ROTATE)
+
 class TurtleBotState:
     def __init__(self, name: str, init_x: float = 0.0, init_z: float = 0.0, init_yaw: float = 0.0):
         self.name = name
@@ -67,7 +89,17 @@ class MultiTurtleBotRelay:
         # 안전 인터록 상태
         self.safety_interlock = False
         self.hazard_info = {"status": "NORMAL", "class": "", "distance": 999.0}
-        
+
+        # T-005: 3-Step Escape 상태머신
+        self.escape_state = EscapeState.IDLE
+        self.escape_phase_start = 0.0
+        self.escape_attempts = 0
+        self.escape_armed = True  # False: 수동 중단됨 → 인터록 해제 전까지 재발동 금지
+
+        # T-006: cmd_vel 워치독 (시작 시 무입력 = 정지 상태)
+        self.last_cmd_time = 0.0
+        self.watchdog_tripped = True
+
         self.connected_vr_clients = set()
         self.latest_frame_jpeg = None
         
@@ -101,6 +133,90 @@ class MultiTurtleBotRelay:
             self.tb2.angular_vel = 1.57 # 원위치 회전
             
         self.tb2.update_physics(dt)
+
+    # ------------------------------------------------------------------
+    # 안전 로직 (Claude 전용): T-005 3-Step Escape, T-006 cmd_vel 워치독
+    # ------------------------------------------------------------------
+    def _set_tb1_vel(self, lin: float, ang: float):
+        self.tb1.linear_vel = lin
+        self.tb1.angular_vel = ang
+
+    def apply_tb1_teleop(self, lin: float, ang: float):
+        """조작자 TWIST/DRIVE 입력 적용. 워치독 갱신 후 Escape·인터록 게이트 통과."""
+        self.last_cmd_time = time.monotonic()
+        self.watchdog_tripped = False
+        if self.escape_state in EscapeState.ACTIVE:
+            return  # 자동 회피 중: 조작자 주행 입력 무시 (STOP 명령만 개입)
+        if self.safety_interlock and lin > 0:
+            lin = 0.0
+        self._set_tb1_vel(lin, ang)
+
+    def stop_tb1(self, reason: str):
+        """비상정지 경로: 진행 중 Escape 중단 + 즉시 정지."""
+        if self.escape_state in EscapeState.ACTIVE:
+            logger.warning(f"[ESCAPE] Aborted ({reason}) in state {self.escape_state}")
+            self.escape_state = EscapeState.IDLE
+            self.escape_armed = False
+        self._set_tb1_vel(0.0, 0.0)
+
+    def _enter_escape(self, state: str, now: float):
+        logger.warning(f"[ESCAPE] {self.escape_state} -> {state} (attempt {self.escape_attempts})")
+        self.escape_state = state
+        self.escape_phase_start = now
+
+    def update_escape(self, now: float):
+        """T-005: 인터록 발생 시 정지 → 후진 → 회전 회피. 텔레메트리 루프에서 매 틱 호출."""
+        state = self.escape_state
+        elapsed = now - self.escape_phase_start
+
+        if state == EscapeState.IDLE:
+            if not self.safety_interlock:
+                self.escape_armed = True
+                self.escape_attempts = 0
+            elif self.escape_armed:
+                self.escape_attempts = 1
+                self._set_tb1_vel(0.0, 0.0)
+                self._enter_escape(EscapeState.STOP, now)
+
+        elif state == EscapeState.STOP:
+            self._set_tb1_vel(0.0, 0.0)
+            if not self.safety_interlock:
+                self._enter_escape(EscapeState.IDLE, now)
+            elif elapsed >= ESCAPE_STOP_HOLD_S:
+                self._enter_escape(EscapeState.BACKUP, now)
+
+        elif state == EscapeState.BACKUP:
+            self._set_tb1_vel(ESCAPE_BACKUP_SPEED, 0.0)
+            if elapsed >= ESCAPE_BACKUP_DURATION_S:
+                self._enter_escape(EscapeState.ROTATE, now)
+
+        elif state == EscapeState.ROTATE:
+            self._set_tb1_vel(0.0, ESCAPE_ROTATE_SPEED)
+            if elapsed >= ESCAPE_ROTATE_ANGLE_RAD / abs(ESCAPE_ROTATE_SPEED):
+                self._set_tb1_vel(0.0, 0.0)
+                if not self.safety_interlock:
+                    self._enter_escape(EscapeState.IDLE, now)
+                elif self.escape_attempts < ESCAPE_MAX_ATTEMPTS:
+                    self.escape_attempts += 1
+                    self._enter_escape(EscapeState.STOP, now)
+                else:
+                    self._enter_escape(EscapeState.FAULT, now)
+
+        elif state == EscapeState.FAULT:
+            # 자동 회피 포기: 수동 조작 허용 (전진은 인터록이 계속 차단)
+            if not self.safety_interlock:
+                self._enter_escape(EscapeState.IDLE, now)
+
+    def check_cmd_watchdog(self, now: float):
+        """T-006: 텔레옵 입력이 타임아웃 이상 끊기면 tb1 정지."""
+        if self.escape_state in EscapeState.ACTIVE:
+            return
+        if now - self.last_cmd_time < CMD_VEL_WATCHDOG_TIMEOUT_S:
+            return
+        if not self.watchdog_tripped:
+            logger.warning(f"[WATCHDOG] No cmd_vel for {CMD_VEL_WATCHDOG_TIMEOUT_S}s -> tb1 stopped")
+            self.watchdog_tripped = True
+        self._set_tb1_vel(0.0, 0.0)
 
     async def video_and_ai_loop(self):
         """tb1 전방 카메라 스트림 생성, YOLOv8 추론 및 충돌 인터록 판정"""
@@ -216,7 +332,10 @@ class MultiTurtleBotRelay:
         while True:
             # tb2 순찰 물리 갱신
             self.update_tb2_patrol(dt)
-            # tb1 물리 갱신
+            # tb1 안전 게이트 (Escape → 워치독 순) 후 물리 갱신
+            now = time.monotonic()
+            self.update_escape(now)
+            self.check_cmd_watchdog(now)
             self.tb1.update_physics(dt)
 
             telemetry_data = {
@@ -226,7 +345,9 @@ class MultiTurtleBotRelay:
                 "safety": {
                     "interlock": self.safety_interlock,
                     "status": "EMERGENCY_STOP" if self.safety_interlock else "NORMAL",
-                    "target": "tb1"
+                    "target": "tb1",
+                    "escape": self.escape_state,
+                    "watchdog": self.watchdog_tripped
                 }
             }
             msg = json.dumps(telemetry_data)
@@ -267,11 +388,7 @@ class MultiTurtleBotRelay:
                         ang = float(data.get("angular", 0.0))
 
                         if target_robot == "tb1":
-                            if self.safety_interlock and lin > 0:
-                                self.tb1.linear_vel = 0.0
-                            else:
-                                self.tb1.linear_vel = lin
-                            self.tb1.angular_vel = ang
+                            self.apply_tb1_teleop(lin, ang)
 
                     elif cmd == "DRIVE":
                         # 하위 호환 PWM / Left-Right 포맷 -> Twist 변환
@@ -283,16 +400,11 @@ class MultiTurtleBotRelay:
                         
                         lin = forward_ratio * 0.22
                         ang = turn_ratio * 2.84
-                        
-                        if self.safety_interlock and lin > 0:
-                            self.tb1.linear_vel = 0.0
-                        else:
-                            self.tb1.linear_vel = lin
-                        self.tb1.angular_vel = ang
+
+                        self.apply_tb1_teleop(lin, ang)
 
                     elif cmd == "STOP":
-                        self.tb1.linear_vel = 0.0
-                        self.tb1.angular_vel = 0.0
+                        self.stop_tb1("operator STOP")
 
                     elif cmd == "TELEPORT":
                         logger.info(f"[Perspective Mode]: {data.get('mode')}")
@@ -304,8 +416,7 @@ class MultiTurtleBotRelay:
         finally:
             video_sender.cancel()
             self.connected_vr_clients.remove(websocket)
-            self.tb1.linear_vel = 0.0
-            self.tb1.angular_vel = 0.0
+            self.stop_tb1("client disconnected")
 
     async def run(self, host: str = "0.0.0.0", port: int = 9090):
         logger.info(f"ROS 2 Humble Multi-TurtleBot Relay running on ws://{host}:{port}...")

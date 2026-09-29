@@ -29,6 +29,16 @@
 | interlock | bool | 비상정지/인터록 활성화 여부 |
 | status | string | `NORMAL` 또는 `EMERGENCY_STOP` |
 | target | string | 비상정지 대상 (`tb1`, `tb2`, `all`) |
+| escape | string | tb1 3-Step Escape 상태: `IDLE` / `STOP` / `BACKUP` / `ROTATE` / `FAULT` (T-005) |
+| watchdog | bool | tb1 cmd_vel 워치독 발동 여부 (0.5s 무입력 → 정지, T-006) |
+
+### 안전 동작 규칙 (tb1)
+- 워치독: `TWIST`/`DRIVE` 수신 간격 > 0.5s → 선·각속도 0. Escape 진행 중(`STOP`/`BACKUP`/`ROTATE`)엔 미적용.
+- 3-Step Escape: 인터록 상승 시 `STOP`(1.0s 정지) → 인터록 지속 시 `BACKUP`(-0.10 m/s, 1.5s) → `ROTATE`(1.0 rad/s, 90°).
+  - `STOP` 중 인터록 해제 → `IDLE` 복귀 (후진 생략).
+  - 사이클 후에도 인터록 지속 → 재시도, 최대 3회 후 `FAULT`.
+  - `FAULT`: 자동 회피 중단, 수동 조작 허용(전진은 인터록이 차단). 인터록 해제 시 `IDLE`.
+  - `STOP`/`BACKUP`/`ROTATE` 중 조작자 `TWIST`/`DRIVE` 무시. `STOP` 명령 또는 클라이언트 연결 해제 → Escape 즉시 중단, 인터록 해제까지 재발동 금지.
 
 ---
 
@@ -62,4 +72,5 @@
 | 날짜 | 변경 | 작성 |
 |---|---|---|
 | 2026-09-30 | 코드 기반 실제 송수신 필드 확정 (T-002 완료) | claude & antigravity |
+| 2026-09-30 | `safety.escape`, `safety.watchdog` 추가 + tb1 안전 동작 규칙 (T-005, T-006) | claude |
 
