@@ -1,0 +1,25 @@
+# Unity
+PhysicalAI_AGV_VR/[Ll]ibrary/
+PhysicalAI_AGV_VR/[Tt]emp/
+PhysicalAI_AGV_VR/[Oo]bj/
+PhysicalAI_AGV_VR/[Bb]uild/
+PhysicalAI_AGV_VR/[Bb]uilds/
+PhysicalAI_AGV_VR/[Ll]ogs/
+PhysicalAI_AGV_VR/[Uu]ser[Ss]ettings/
+*.csproj
+*.sln
+*.apk
+*.aab
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# YOLO 가중치 (용량 큼 → 별도 보관)
+*.pt
+*.onnx
+
+# 에이전트
+.agent_cache/
+.env

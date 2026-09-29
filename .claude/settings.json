@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python tools/gemini_worker.py:*)",
+      "Bash(powershell -ExecutionPolicy Bypass -File tools/unity_check.ps1:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(python -m py_compile:*)"
+    ],
+    "deny": [
+      "Read(./PhysicalAI_AGV_VR/Library/**)",
+      "Read(./PhysicalAI_AGV_VR/Temp/**)",
+      "Read(./PhysicalAI_AGV_VR/Logs/**)",
+      "Read(./PhysicalAI_AGV_VR/obj/**)",
+      "Read(./PhysicalAI_AGV_VR/UserSettings/**)",
+      "Read(./.agent_cache/*.log)",
+      "Read(./**/*.pdf)"
+    ]
+  }
+}

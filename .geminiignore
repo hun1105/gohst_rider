@@ -1,0 +1,8 @@
+PhysicalAI_AGV_VR/Library/
+PhysicalAI_AGV_VR/Temp/
+PhysicalAI_AGV_VR/obj/
+PhysicalAI_AGV_VR/Logs/
+PhysicalAI_AGV_VR/UserSettings/
+.agent_cache/
+*.pt
+*.onnx
