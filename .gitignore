@@ -23,3 +23,23 @@ __pycache__/
 # 에이전트
 .agent_cache/
 .env
+
+# 제출 패키지 산출물
+dist/
+
+# 문서 빌드 의존성
+node_modules/
+
+# 릴레이 운행 이력 (현장 기록, 제출 시 필요한 것만 docs로 발췌)
+ai_relay_server/logs/
+
+# 비밀정보 (Wi-Fi·SSH 평문) — 커밋·배포 금지
+docs/handoff/*HANDOVER*.md
+
+# Unity가 중복 생성한 빈 폴더 메타 (XR 1, Settings 1 …)
+PhysicalAI_AGV_VR/Assets/XR [0-9]*
+PhysicalAI_AGV_VR/Assets/XR/Settings [0-9]*
+
+# 참고 논문 PDF·백업 압축 (저작권·용량)
+hardware_firmware/**/*.pdf
+hardware_firmware/*.zip
