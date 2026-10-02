@@ -43,3 +43,6 @@ PhysicalAI_AGV_VR/Assets/XR/Settings [0-9]*
 # 참고 논문 PDF·백업 압축 (저작권·용량)
 hardware_firmware/**/*.pdf
 hardware_firmware/*.zip
+
+# 패키징 비밀정보 검사용 로컬 패턴 (실제 비밀번호 포함)
+tools/secret_patterns.local.txt
