@@ -1,0 +1,145 @@
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+  - Class: rviz_common/Selection
+    Name: Selection
+  - Class: rviz_common/Tool Properties
+    Name: Tool Properties
+  - Class: rviz_common/Views
+    Name: Views
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Class: rviz_default_plugins/Grid
+      Enabled: true
+      Name: Grid
+      Plane: XY
+      Reference Frame: <Fixed Frame>
+      Cell Size: 1
+      Color: 160; 160; 164
+    - Class: rviz_default_plugins/Map
+      Enabled: true
+      Name: FilteredMap
+      Alpha: 0.7
+      Color Scheme: map
+      Draw Behind: true
+      Topic:
+        Value: /map_static
+        Reliability Policy: Reliable
+        Durability Policy: Transient Local
+        History Policy: Keep Last
+        Depth: 5
+      Update Topic:
+        Value: /map_updates
+        Reliability Policy: Reliable
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Depth: 5
+    - Class: rviz_default_plugins/LaserScan
+      Enabled: true
+      Name: RawScan
+      Topic:
+        Value: /scan_fresh
+        Reliability Policy: Best Effort
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Depth: 1
+      Style: Points
+      Size (Pixels): 3
+      Color: 0; 255; 0
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
+      Name: DynamicBoxes
+      Topic:
+        Value: /dynamic_boxes
+        Reliability Policy: Reliable
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Depth: 5
+      Namespaces: {}
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
+      Name: GridCandidates
+      Topic:
+        Value: /dynamic_grid_candidates
+        Reliability Policy: Reliable
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Depth: 5
+      Namespaces: {}
+    - Class: rviz_default_plugins/PointCloud2
+      Enabled: true
+      Name: DynamicClusters
+      Topic:
+        Value: /dynamic_clusters
+        Reliability Policy: Reliable
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Depth: 5
+      Style: Points
+      Size (Pixels): 5
+      Color Transformer: FlatColor
+      Color: 255; 0; 0
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
+      Name: Frontiers
+      Topic:
+        Value: /explore/frontiers
+        Reliability Policy: Reliable
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Depth: 5
+      Namespaces: {}
+    - Class: rviz_default_plugins/Path
+      Enabled: true
+      Name: DijkstraPlan
+      Topic:
+        Value: /plan
+        Reliability Policy: Reliable
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Depth: 5
+      Color: 0; 255; 0
+      Line Style: Lines
+      Line Width: 0.03
+      Pose Style: None
+    - Class: rviz_default_plugins/TF
+      Enabled: true
+      Name: TF
+      Show Arrows: true
+      Show Axes: true
+      Show Names: false
+      Marker Scale: 0.5
+    - Class: rviz_default_plugins/RobotModel
+      Enabled: true
+      Name: RobotModel
+      Description Topic:
+        Value: /robot_description
+        Reliability Policy: Reliable
+        Durability Policy: Transient Local
+        History Policy: Keep Last
+        Depth: 5
+  Enabled: true
+  Global Options:
+    Fixed Frame: map
+    Background Color: 48; 48; 48
+    Frame Rate: 10
+  Name: root
+  Tools:
+    - Class: rviz_default_plugins/Interact
+    - Class: rviz_default_plugins/MoveCamera
+    - Class: rviz_default_plugins/Select
+    - Class: rviz_default_plugins/FocusCamera
+    - Class: rviz_default_plugins/Measure
+    - Class: rviz_default_plugins/SetInitialPose
+    - Class: rviz_default_plugins/SetGoal
+  Views:
+    Current:
+      Class: rviz_default_plugins/TopDownOrtho
+      Name: Current View
+      Target Frame: map
+      Angle: 0
+      Scale: 50
+Window Geometry:
+  Height: 800
+  Width: 1200

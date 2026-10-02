@@ -1,0 +1,27 @@
+/**:
+  ros__parameters:
+    # Live OccupancyGrid published by Cartographer.
+    costmap_topic: map
+    costmap_updates_topic: map_updates
+    robot_base_frame: base_link
+
+    # Slowed from 1.0: at max_vel_x=0.12 m/s the robot couldn't make real
+    # progress toward a frontier before it got preempted by the next
+    # recalculation, causing goal-flapping. 0.33 gives it ~3s per goal.
+    planner_frequency: 0.33
+    progress_timeout: 45.0
+
+    # Frontier score = distance cost - frontier-size gain.
+    # Prefer nearby frontiers more strongly than large distant frontiers.
+    potential_scale: 2.5
+    orientation_scale: 0.0
+    gain_scale: 0.8
+
+    # Ignore tiny gaps/noise, but admit normal indoor doorway-sized frontiers.
+    # START TUNING HERE: increase to 0.30 if false candidates appear.
+    min_frontier_size: 0.2
+    transform_tolerance: 0.5
+
+    visualize: true
+    # Prevent an unexpected return-to-start motion during initial tests.
+    return_to_init: false

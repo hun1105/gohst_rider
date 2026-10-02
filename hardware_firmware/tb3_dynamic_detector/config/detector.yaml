@@ -1,0 +1,108 @@
+tb3_dynamic_detector:
+  ros__parameters:
+    input_topic: /scan
+    fixed_frame: odom
+
+    minimum_range: 0.20
+    maximum_range: 3.50
+
+    cluster_base_distance: 0.08
+    cluster_range_scale: 0.02
+    maximum_cluster_gap: 0.18
+    minimum_cluster_points: 3
+
+    # 정지 jshim 실험용 정적 배경 모델 (약 1.1초 초기화, 약 1.8초 이력).
+    # === MOVING-ROBOT WALL FALSE-POSITIVE TUNING ===
+    # Learn more stationary background before allowing a dynamic decision.
+    history_frames: 30
+    minimum_history_frames: 12
+    # 정지 벽의 LiDAR/TF 미세 흔들림을 배경으로 허용하는 범위.
+    history_voxel_size: 0.05
+    # Wall points may jitter because of LiDAR noise and TF/odometry error.
+    # Expand the static matching tolerance so repeated walls remain background.
+    history_match_base: 0.060
+    history_match_range_scale: 0.012
+    # Only clusters with very low background support enter dynamic tracking.
+    static_support_threshold: 0.35
+    # 배경과 불일치하는 점만 클러스터링한다.
+    # 전경 자체만으로는 동적으로 확정하지 않고 속도 또는 누적 변위도 요구한다.
+    foreground_only_detection: false
+
+    # === MODIFY HERE: temporal occupancy-grid candidate test ===
+    # Green boxes are candidates only; they do not affect red dynamic boxes.
+    temporal_grid_enabled: true
+    grid_resolution: 0.05
+    # Require a longer confirmed-free history before a new object is trusted.
+    grid_free_confirmations: 8
+    grid_candidate_hold_seconds: 0.8
+
+    # === FILTERED RUN: dynamic scan-point removal is enabled ===
+    static_scan_enabled: true
+
+    # === MODIFY HERE: robot-rotation false-positive gate ===
+    # Pause dynamic decisions above this odometry yaw rate [rad/s].
+    # Slow-rotation experiment: keep dynamic detection active continuously.
+    rotation_gate_enabled: false
+    rotation_gate_threshold: 0.32
+    # Wait briefly after rotation so one distorted LDS-02 scan is not judged.
+    rotation_gate_resume_delay: 0.1
+    rotation_gate_odom_timeout: 1.0
+
+    # === MODIFY HERE: Kalman Filter and Mahalanobis association ===
+    use_kalman_filter: true
+    mahalanobis_gate: 5.99
+    kalman_position_std: 0.08
+    kalman_velocity_std: 0.50
+    kalman_measurement_std: 0.04
+    kalman_acceleration_std: 0.80
+    # Require a green free-space-entry candidate before red classification.
+    require_grid_candidate_for_dynamic: true
+    grid_max_cell_age: 8.0
+    # 정적 벽의 LiDAR/TF 미세 흔들림을 동적으로 오인하지 않도록 유지.
+    require_low_static_support: true
+    # 벽 클러스터의 잘린 구간도 중심점이 변할 수 있어 현재 실험에서는 비활성화.
+    # Slow-object path: cumulative centroid movement is used in addition to
+    # instantaneous velocity, while static-background and free-space gates
+    # remain mandatory to protect walls from false red boxes.
+    enable_displacement_detection: true
+    displacement_window_seconds: 1.20
+    displacement_threshold: 0.050
+
+    association_distance: 0.35
+    velocity_filter_alpha: 0.60
+    # 정지 jshim 실험: 느린 tb1 이동도 동적으로 감지하는 최소 속도 [m/s].
+    dynamic_velocity_threshold: 0.060
+    confirmation_window: 5
+    dynamic_confirmations: 3
+    dynamic_hold_seconds: 1.00
+    track_timeout: 0.80
+
+    box_padding: 0.08
+    # Keep false during SLAM to avoid rendering every static cluster.
+    # Set true only for short track-continuity diagnostics.
+    show_all_clusters: false
+
+    # 주행 중 과거 scan에 최신 자세를 적용하면 벽이 이동한 것처럼 보인다.
+    # 정확한 scan 시각의 TF가 없으면 해당 scan을 버려 벽 오검출을 억제한다.
+    latest_tf_fallback: false
+    # 원격 DDS 지연 중에도 정확한 scan 시각의 TF를 기다린다.
+    # 0.30초를 넘기면 해당 scan만 버리며 최신 자세로 대체하지 않는다.
+    tf_lookup_timeout: 0.30
+
+# /map_static filtering runs in a separate process so OccupancyGrid work
+# cannot delay the 10 Hz LiDAR tracking callback.
+dynamic_map_filter:
+  ros__parameters:
+    input_map_topic: /map
+    output_map_topic: /map_static
+    dynamic_cloud_topic: /dynamic_clusters
+    map_static_enabled: true
+    map_dynamic_clear_radius: 0.18
+    # Integrated auto-exploration: recover the map soon after TB1 leaves.
+    map_dynamic_mask_hold_seconds: 5.0
+    map_occupied_threshold: 65
+    # Deduplicate repeated dynamic points in a 5 cm map-frame grid.
+    history_resolution: 0.05
+    tf_lookup_timeout: 0.05
+    slow_callback_warning_sec: 0.25
+    status_period_sec: 10.0
