@@ -14,6 +14,16 @@ namespace PhysicalAI.VR
         public float linear_vel;
         public float angular_vel;
         public float battery;
+        // T-012: 실기 연동 상태·LiDAR 섹터 거리 (m, 없음 = -1). sim은 source="sim", front_min=-1
+        public string source;
+        public bool online;
+        public float front_min = -1f;
+        public float rear_min = -1f;
+        // T-025: 로봇별 주행 모드·정지 상태 (구버전 서버: null/false)
+        public string mode;
+        public string auto_state;
+        public bool alert;
+        public string stop_reason;
     }
 
     [Serializable]
@@ -23,6 +33,28 @@ namespace PhysicalAI.VR
         public string status;
         // 선택 필드: "tb1" | "tb2" | "all". 미전송(빈 값) 시 tb1 대상으로 간주 (하위 호환)
         public string target;
+        // T-015: 정지 원인·LiDAR 추천 탈출 방향 (deg, +좌) / 여유 (m, -1 = 없음)
+        public string reason;
+        public float escape_heading;
+        public float escape_clearance = -1f;
+    }
+
+    /// <summary>T-019: 경로 추천·예상 궤적. 좌표는 Unity 월드 평탄 배열 [x0, z0, x1, z1, …]</summary>
+    [Serializable]
+    public class PathData
+    {
+        public string robot;   // T-025: 경로 대상 로봇
+        public float[] recommended;
+        public string recommended_level;
+        public float[] predicted;
+        public string predicted_level;
+        public float[] alternatives;
+        public int alt_points;
+        // T-024 선회 추천 (FORWARD / PIVOT / NONE)
+        public string recommended_mode;
+        public float pivot_deg;
+        public float[] pivot_points;
+        public string pivot_level;
     }
 
     [Serializable]
@@ -32,6 +64,15 @@ namespace PhysicalAI.VR
         public RobotPoseData tb1;
         public RobotPoseData tb2;
         public SafetyData safety;
+        // T-007: 서버가 인정한 현재 텔레옵 권한 로봇 ("tb1" | "tb2"). SELECT_ROBOT ACK
+        public string controlled_robot;
+        public string camera_robot;   // T-025
+        // T-016: tb1 주행 모드 ("MANUAL" | "AUTO") / AUTO 세부 상태
+        public string mode;
+        public string auto_state;
+        // T-019: tb1 경로 + LiDAR 점 (Unity 월드 평탄 배열)
+        public PathData path;
+        public float[] scan;
     }
 
     /// <summary>
@@ -47,8 +88,12 @@ namespace PhysicalAI.VR
         public Transform tb2Transform; // 순찰/장애물 AGV (자율 순찰)
 
         [Header("보간 설정")]
-        public float positionLerpSpeed = 15.0f;
-        public float rotationSlerpSpeed = 15.0f;
+        [Tooltip("위치 추종 시간 (s). 20Hz 텔레메트리 간격·수신 몰림을 속도 연속으로 메움")]
+        public float positionSmoothTime = 0.12f;
+        [Tooltip("방향 추종 시간 (s)")]
+        public float rotationSmoothTime = 0.10f;
+        [Tooltip("이 거리 이상 차이 나면 보간 없이 즉시 이동 (RESET_POSE 등, m)")]
+        public float snapDistance = 1.5f;
 
         [Header("실시간 안전 상태 (모니터링)")]
         public bool isInterlocked = false;
@@ -69,6 +114,15 @@ namespace PhysicalAI.VR
         public float LastTelemetryTime { get; private set; } = -1f;
         public bool IsConnected => wsManager != null && wsManager.IsConnected;
         public string InterlockTarget { get; private set; } = "tb1";
+        public string InterlockReason { get; private set; } = string.Empty;
+        public float EscapeHeadingDeg { get; private set; }
+        public float EscapeClearance { get; private set; } = -1f;
+        /// <summary>서버 기준 텔레옵 권한 로봇. 텔레메트리 수신 전에는 빈 문자열.</summary>
+        public string ControlledRobot { get; private set; } = string.Empty;
+        public string DriveMode { get; private set; } = "MANUAL";
+        public string AutoState { get; private set; } = "OFF";
+        public PathData LatestPath { get; private set; }
+        public float[] LatestScan { get; private set; } = Array.Empty<float>();
         public event Action OnTelemetryUpdated;
 
         /// <summary>로봇 ID("tb1"/"tb2")별 비상정지 여부</summary>
@@ -79,6 +133,38 @@ namespace PhysicalAI.VR
         }
 
         public RobotPoseData GetRobotData(string robotId) => robotId == "tb2" ? TB2Data : TB1Data;
+
+        /// <summary>카메라가 달린 로봇 (영상 스크린 부착 대상). 구버전 서버는 tb1.</summary>
+        public string CameraRobot { get; private set; } = "tb1";
+
+        /// <summary>T-025: 로봇별 정지·알림 (인터록 또는 AUTO STUCK). 구버전 서버는 기존 규칙으로 판정.</summary>
+        public bool RobotAlert(string robotId)
+        {
+            RobotPoseData d = GetRobotData(robotId);
+            if (d != null && !string.IsNullOrEmpty(d.mode)) return d.alert;
+            return IsRobotInterlocked(robotId) || (robotId == "tb1" && AutoState == "STUCK");
+        }
+
+        public string RobotMode(string robotId)
+        {
+            RobotPoseData d = GetRobotData(robotId);
+            if (d != null && !string.IsNullOrEmpty(d.mode)) return d.mode;
+            return robotId == "tb1" ? DriveMode : "MANUAL";
+        }
+
+        public string RobotAutoState(string robotId)
+        {
+            RobotPoseData d = GetRobotData(robotId);
+            if (d != null && !string.IsNullOrEmpty(d.auto_state)) return d.auto_state;
+            return robotId == "tb1" ? AutoState : "OFF";
+        }
+
+        public string RobotStopReason(string robotId)
+        {
+            RobotPoseData d = GetRobotData(robotId);
+            if (d != null && !string.IsNullOrEmpty(d.mode)) return d.stop_reason ?? string.Empty;
+            return IsRobotInterlocked(robotId) ? InterlockReason : string.Empty;
+        }
 
         private void Start()
         {
@@ -92,14 +178,20 @@ namespace PhysicalAI.VR
                 _targetPosTB2 = tb2Transform.position;
                 _targetRotTB2 = tb2Transform.rotation;
             }
+            // AddComponent 직후 OnEnable 시점엔 wsManager 미할당일 수 있음 → Start에서 재확인
+            Subscribe();
         }
 
         private void OnEnable()
         {
-            if (wsManager != null)
-            {
-                wsManager.OnTextReceived += OnTelemetryReceived;
-            }
+            Subscribe();
+        }
+
+        private void Subscribe()
+        {
+            if (wsManager == null) return;
+            wsManager.OnTextReceived -= OnTelemetryReceived;  // 중복 구독 방지
+            wsManager.OnTextReceived += OnTelemetryReceived;
         }
 
         private void OnDisable()
@@ -146,6 +238,24 @@ namespace PhysicalAI.VR
                     isInterlocked = packet.safety.interlock;
                     safetyStatus = packet.safety.status;
                     InterlockTarget = string.IsNullOrEmpty(packet.safety.target) ? "tb1" : packet.safety.target;
+                    InterlockReason = packet.safety.reason ?? string.Empty;
+                    EscapeHeadingDeg = packet.safety.escape_heading;
+                    EscapeClearance = packet.safety.escape_clearance;
+                }
+
+                // T-019: 경로·LiDAR 점 (구버전 서버: null → 비움)
+                LatestPath = packet.path;
+                LatestScan = packet.scan ?? Array.Empty<float>();
+
+                // T-016: 주행 모드 (구버전 서버: 필드 없음 → 기존 값 유지)
+                if (!string.IsNullOrEmpty(packet.mode)) DriveMode = packet.mode;
+                if (!string.IsNullOrEmpty(packet.auto_state)) AutoState = packet.auto_state;
+                if (!string.IsNullOrEmpty(packet.camera_robot)) CameraRobot = packet.camera_robot;
+
+                // 4. 조종 권한 ACK (구버전 서버: 필드 없음 → 빈 문자열 유지)
+                if (!string.IsNullOrEmpty(packet.controlled_robot))
+                {
+                    ControlledRobot = packet.controlled_robot;
                 }
 
                 LastTelemetryTime = Time.unscaledTime;
@@ -157,20 +267,31 @@ namespace PhysicalAI.VR
             }
         }
 
+        // SmoothDamp 속도 상태 (로봇별)
+        private Vector3 _velTB1, _velTB2;
+        private float _yawVelTB1, _yawVelTB2;
+
         private void Update()
         {
-            // 실시간 부드러운 위치 및 회전 보간 적용
+            // 임계 감쇠 추종: 지수 Lerp는 50ms마다 급정지·급출발(계단)을 만들어 앞뒤로 튕겨 보임
             if (tb1Transform != null && _hasReceivedTB1)
-            {
-                tb1Transform.position = Vector3.Lerp(tb1Transform.position, _targetPosTB1, Time.deltaTime * positionLerpSpeed);
-                tb1Transform.rotation = Quaternion.Slerp(tb1Transform.rotation, _targetRotTB1, Time.deltaTime * rotationSlerpSpeed);
-            }
-
+                Follow(tb1Transform, _targetPosTB1, _targetRotTB1, ref _velTB1, ref _yawVelTB1);
             if (tb2Transform != null && _hasReceivedTB2)
+                Follow(tb2Transform, _targetPosTB2, _targetRotTB2, ref _velTB2, ref _yawVelTB2);
+        }
+
+        private void Follow(Transform t, Vector3 targetPos, Quaternion targetRot, ref Vector3 vel, ref float yawVel)
+        {
+            if ((t.position - targetPos).sqrMagnitude > snapDistance * snapDistance)
             {
-                tb2Transform.position = Vector3.Lerp(tb2Transform.position, _targetPosTB2, Time.deltaTime * positionLerpSpeed);
-                tb2Transform.rotation = Quaternion.Slerp(tb2Transform.rotation, _targetRotTB2, Time.deltaTime * rotationSlerpSpeed);
+                t.SetPositionAndRotation(targetPos, targetRot);
+                vel = Vector3.zero;
+                yawVel = 0f;
+                return;
             }
+            Vector3 pos = Vector3.SmoothDamp(t.position, targetPos, ref vel, positionSmoothTime);
+            float yaw = Mathf.SmoothDampAngle(t.eulerAngles.y, targetRot.eulerAngles.y, ref yawVel, rotationSmoothTime);
+            t.SetPositionAndRotation(pos, Quaternion.Euler(0f, yaw, 0f));
         }
     }
 }

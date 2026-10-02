@@ -1,0 +1,27 @@
+{
+    "name": "PhysicalAI.Editor.XR",
+    "rootNamespace": "PhysicalAI.EditorTools",
+    "references": [
+        "Unity.XR.Management",
+        "Unity.XR.Management.Editor",
+        "Unity.XR.OpenXR",
+        "Unity.XR.OpenXR.Editor"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.xr.openxr",
+            "expression": "1.0.0",
+            "define": "PHYSICALAI_OPENXR"
+        }
+    ],
+    "noEngineReferences": false
+}
