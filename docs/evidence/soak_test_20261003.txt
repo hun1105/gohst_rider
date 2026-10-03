@@ -1,0 +1,96 @@
+{
+  "duration_s": 303.0,
+  "cycles": 26,
+  "telemetry": {
+    "count": 6058,
+    "expected": 6059,
+    "rate_hz": 19.99,
+    "interval_ms_p50": 53.0,
+    "p95": 78.4,
+    "p99": 89.6,
+    "max": 190.8,
+    "gaps_over_150ms": 1
+  },
+  "video_frames": {
+    "count": 7422,
+    "rate_fps": 24.5
+  },
+  "cmd_vel": {
+    "tb1": {
+      "count": 6079,
+      "rate_hz": 20.06,
+      "min_per_s": 18,
+      "seconds_below_15": 0
+    },
+    "tb2": {
+      "count": 6079,
+      "rate_hz": 20.06,
+      "min_per_s": 18,
+      "seconds_below_15": 0
+    }
+  },
+  "command_latency_ms": {
+    "samples": 1220,
+    "p50": 83.7,
+    "p95": 113.5,
+    "max": 230.4
+  },
+  "memory": {
+    "samples(t_s, working_set_MB, traced_MB)": [
+      [
+        12,
+        69.0,
+        2.93
+      ],
+      [
+        47,
+        71.4,
+        3.22
+      ],
+      [
+        82,
+        70.2,
+        3.46
+      ],
+      [
+        116,
+        73.0,
+        3.69
+      ],
+      [
+        151,
+        72.0,
+        3.94
+      ],
+      [
+        186,
+        74.8,
+        4.22
+      ],
+      [
+        221,
+        73.4,
+        4.5
+      ],
+      [
+        256,
+        76.3,
+        4.71
+      ],
+      [
+        291,
+        75.8,
+        5.0
+      ]
+    ],
+    "working_set_delta_MB": 9.3,
+    "traced_delta_MB": 2.12,
+    "top_growth": [
+    ]
+  },
+  "safety_violations": {
+    "count": 0,
+    "first": []
+  }
+}
+SOAK TEST ATTENTION

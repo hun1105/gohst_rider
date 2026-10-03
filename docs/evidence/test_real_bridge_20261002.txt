@@ -1,95 +1,95 @@
 C:\Users\hun\OneDrive - 국립한국해양대학교\바탕 화면\대회_프로젝트_통합자료\5_경남2026_피지컬AI_메타퀘스트VR_AGV\ai_relay_server\test_real_bridge.py:14: DeprecationWarning: websockets.server.serve is deprecated
   from websockets.server import serve
-2026-10-02 19:24:44,839 [INFO] server listening on 127.0.0.1:19191
-2026-10-02 19:24:44,839 [INFO] server listening on 127.0.0.1:19192
-2026-10-02 19:24:44,840 [INFO] ROS 2 Humble Multi-TurtleBot Relay running on ws://127.0.0.1:19193...
-2026-10-02 19:24:44,840 [INFO] [T-012] tb1 = REAL via rosbridge ws://127.0.0.1:19191
-2026-10-02 19:24:44,840 [INFO] [T-012] tb2 = REAL via rosbridge ws://127.0.0.1:19192
-2026-10-02 19:24:44,840 [INFO] server listening on 127.0.0.1:19193
-2026-10-02 19:24:44,842 [WARNING] [REAL GUARD] tb1 motion blocked: offline (odom stale)
-2026-10-02 19:24:44,842 [WARNING] [REAL GUARD] tb2 motion blocked: offline (odom stale)
-2026-10-02 19:24:44,866 [INFO] connection open
-2026-10-02 19:24:44,866 [INFO] connection open
-2026-10-02 19:24:44,867 [INFO] [tb1] rosbridge connected ws://127.0.0.1:19191 topics={'cmd_vel': '/cmd_vel', 'odom': '/odom', 'scan': '/scan'}
-2026-10-02 19:24:44,868 [INFO] [tb2] rosbridge connected ws://127.0.0.1:19192 topics={'cmd_vel': '/cmd_vel', 'odom': '/odom', 'scan': '/scan'}
-2026-10-02 19:24:44,890 [INFO] [REAL GUARD] tb1 clear
-2026-10-02 19:24:44,890 [INFO] [REAL GUARD] tb2 clear
-2026-10-02 19:24:45,826 [INFO] connection open
-2026-10-02 19:24:45,826 [INFO] VR Client connected: ('127.0.0.1', 60080)
-2026-10-02 19:24:46,238 [WARNING] [CONTROL] Teleop handover tb1 -> tb2
-2026-10-02 19:24:47,406 [WARNING] [WATCHDOG] No cmd_vel for 0.5s -> tb2 stopped
-2026-10-02 19:24:48,079 [WARNING] [REAL GUARD] tb2 motion blocked: front 0.25m
-2026-10-02 19:24:48,519 [INFO] [REAL GUARD] tb2 clear
-2026-10-02 19:24:49,439 [WARNING] [WATCHDOG] No cmd_vel for 0.5s -> tb2 stopped
-2026-10-02 19:24:49,487 [WARNING] [REAL GUARD] tb2 motion blocked: offline (odom stale)
-2026-10-02 19:24:50,400 [WARNING] [CONTROL] Teleop handover tb2 -> tb1
-2026-10-02 19:24:50,482 [INFO] [REAL GUARD] tb2 clear
-2026-10-02 19:24:50,710 [WARNING] [OBSTACLE] tb1 정지 — 조작자 개입 필요: LIDAR OBSTACLE (0.30m), 추천 탈출 -35° (1.5m)
-2026-10-02 19:24:54,808 [WARNING] [REAL GUARD] tb1 motion blocked: rear 0.15m
-2026-10-02 19:24:54,868 [INFO] [REAL GUARD] tb1 clear
-2026-10-02 19:24:55,188 [WARNING] [REAL GUARD] tb1 motion blocked: rear 0.15m
-2026-10-02 19:24:55,679 [INFO] [REAL GUARD] tb1 clear
-2026-10-02 19:24:55,734 [INFO] [OBSTACLE] tb1 인터록 해제 → 주행 가능
-2026-10-02 19:24:56,083 [WARNING] [WATCHDOG] No cmd_vel for 0.5s -> tb1 stopped
-2026-10-02 19:24:56,843 [INFO] [AUTO] tb1 배회 구역 중심 고정 (0.00, 0.00), 반경 1.5m
-2026-10-02 19:24:56,843 [WARNING] [AUTO] tb1 시작/재개 (operator AUTO command)
-2026-10-02 19:24:59,872 [WARNING] [OBSTACLE] tb1 정지 — 조작자 개입 필요: LIDAR OBSTACLE (0.30m), 추천 탈출 -35° (1.5m)
-2026-10-02 19:24:59,872 [WARNING] [AUTO] tb1 STUCK — 조작자 개입 필요: LIDAR OBSTACLE (0.30m)
-2026-10-02 19:25:01,031 [INFO] [OBSTACLE] tb1 인터록 해제 → 주행 가능
-2026-10-02 19:25:02,272 [WARNING] [AUTO] tb1 시작/재개 (operator AUTO command)
-2026-10-02 19:25:02,986 [WARNING] [AUTO] tb1 OFF → MANUAL (operator input)
-2026-10-02 19:25:03,639 [WARNING] [AUTO] tb1 시작/재개 (operator AUTO command)
-2026-10-02 19:25:05,832 [WARNING] [AUTO] tb1 STUCK — 조작자 개입 필요: dead end - no clear path
-2026-10-02 19:25:06,953 [WARNING] [AUTO] tb1 시작/재개 (operator AUTO command)
-2026-10-02 19:25:13,312 [WARNING] [AUTO] tb1 STUCK — 조작자 개입 필요: avoid timeout 6s
-2026-10-02 19:25:14,261 [WARNING] [AUTO] tb1 시작/재개 (operator AUTO command)
-2026-10-02 19:25:14,570 [WARNING] [AUTO] tb1 OFF → MANUAL (operator STOP)
-2026-10-02 19:25:14,609 [WARNING] [WATCHDOG] No cmd_vel for 0.5s -> tb1 stopped
-2026-10-02 19:25:15,318 [WARNING] [AUTO] tb1 시작/재개 (operator AUTO command)
-2026-10-02 19:25:15,610 [WARNING] [AUTO] tb1 OFF → MANUAL (operator STOP)
-2026-10-02 19:25:17,084 [WARNING] [WATCHDOG] No cmd_vel for 0.5s -> tb1 stopped
-2026-10-02 19:25:18,133 [WARNING] [POSE] tb1 원점 재설정 → Unity (0.00, 0.00, 0°)
-2026-10-02 19:25:18,881 [WARNING] [POSE] tb1 원점 재설정 → Unity (2.00, 3.00, 90°)
-2026-10-02 19:25:19,921 [WARNING] [POSE] tb2 원점 재설정 → Unity (1.80, 5.00, 180°)
-2026-10-02 19:25:20,234 [WARNING] [OBSTACLE] tb1 정지 — 조작자 개입 필요: LIDAR OBSTACLE (0.30m), 추천 탈출 +70° (1.5m)
-2026-10-02 19:25:21,055 [INFO] [OBSTACLE] tb1 인터록 해제 → 주행 가능
-2026-10-02 19:25:21,784 [WARNING] [AUTO] tb1 시작/재개 (operator AUTO command)
-2026-10-02 19:25:22,111 [WARNING] [AUTO] tb1 OFF → MANUAL (operator STOP)
-2026-10-02 19:25:22,820 [WARNING] [POSE] tb2 원점 재설정 → Unity (2.50, 3.80, 180°)
-2026-10-02 19:25:22,910 [WARNING] [OBSTACLE] tb1 정지 — 조작자 개입 필요: COLLISION RISK: TB2 AGV (0.80m), 추천 탈출 +0° (1.5m)
-2026-10-02 19:25:24,066 [WARNING] [POSE] tb2 원점 재설정 → Unity (2.50, 6.00, 180°)
-2026-10-02 19:25:24,195 [INFO] [OBSTACLE] tb1 인터록 해제 → 주행 가능
-2026-10-02 19:25:24,513 [WARNING] [WATCHDOG] No cmd_vel for 0.5s -> tb1 stopped
-2026-10-02 19:25:24,868 [WARNING] [POSE] tb1 원점 재설정 → Unity (0.00, 0.00, 0°)
-2026-10-02 19:25:24,868 [WARNING] [POSE] tb2 원점 재설정 → Unity (0.00, 3.00, 180°)
-2026-10-02 19:25:25,173 [WARNING] [AUTO] tb1 시작/재개 (operator AUTO command)
-2026-10-02 19:25:25,497 [INFO] [AUTO] tb2 배회 구역 중심 고정 (0.50, 0.20), 반경 1.5m
-2026-10-02 19:25:25,498 [WARNING] [AUTO] tb2 시작/재개 (operator AUTO command)
-2026-10-02 19:25:26,819 [WARNING] [POSE] tb2 원점 재설정 → Unity (0.00, 0.80, 180°)
-2026-10-02 19:25:26,846 [WARNING] [AUTO] tb2 STUCK — 조작자 개입 필요: COLLISION RISK: TB1 AGV (0.80m)
-2026-10-02 19:25:26,912 [WARNING] [OBSTACLE] tb1 정지 — 조작자 개입 필요: COLLISION RISK: TB2 AGV (0.80m), 추천 탈출 +0° (1.5m)
-2026-10-02 19:25:26,912 [WARNING] [AUTO] tb1 STUCK — 조작자 개입 필요: COLLISION RISK: TB2 AGV (0.80m)
-2026-10-02 19:25:27,918 [WARNING] [CONTROL] Teleop handover tb1 -> tb2
-2026-10-02 19:25:27,918 [INFO] [Perspective Mode]: FPV robot=tb2
-2026-10-02 19:25:27,918 [WARNING] [AUTO] tb2 OFF → MANUAL (operator entered cockpit)
-2026-10-02 19:25:30,005 [WARNING] [WATCHDOG] No cmd_vel for 0.5s -> tb2 stopped
-2026-10-02 19:25:30,258 [WARNING] [POSE] tb2 원점 재설정 → Unity (0.00, 3.00, 180°)
-2026-10-02 19:25:30,344 [INFO] [OBSTACLE] tb1 인터록 해제 → 주행 가능
-2026-10-02 19:25:31,071 [WARNING] [AUTO] tb1 시작/재개 (operator AUTO command)
-2026-10-02 19:25:31,368 [WARNING] [AUTO] tb2 시작/재개 (operator AUTO command)
-2026-10-02 19:25:32,059 [INFO] [Perspective Mode]: FPV robot=tb1
-2026-10-02 19:25:32,059 [WARNING] [AUTO] tb1 OFF → MANUAL (operator entered cockpit)
-2026-10-02 19:25:32,792 [WARNING] [AUTO] tb2 OFF → MANUAL (operator AUTO command)
-2026-10-02 19:25:33,097 [WARNING] [CONTROL] Teleop handover tb2 -> tb1
-2026-10-02 19:25:33,297 [WARNING] [AUTO] tb1 시작/재개 (operator AUTO command)
-2026-10-02 19:25:43,627 [WARNING] [AUTO] tb1 OFF → MANUAL (client disconnected)
-2026-10-02 19:25:43,627 [INFO] connection closed
-2026-10-02 19:25:43,928 [INFO] connection closed
-2026-10-02 19:25:43,928 [INFO] connection closed
-2026-10-02 19:25:43,928 [INFO] server closing
-2026-10-02 19:25:43,928 [INFO] server closing
+2026-10-03 14:32:39,949 [INFO] server listening on 127.0.0.1:19191
+2026-10-03 14:32:39,949 [INFO] server listening on 127.0.0.1:19192
+2026-10-03 14:32:39,949 [INFO] ROS 2 Humble Multi-TurtleBot Relay running on ws://127.0.0.1:19193...
+2026-10-03 14:32:39,949 [INFO] [T-012] tb1 = REAL via rosbridge ws://127.0.0.1:19191
+2026-10-03 14:32:39,958 [INFO] [T-012] tb2 = REAL via rosbridge ws://127.0.0.1:19192
+2026-10-03 14:32:39,958 [INFO] server listening on 127.0.0.1:19193
+2026-10-03 14:32:39,964 [WARNING] [REAL GUARD] tb1 motion blocked: offline (odom stale)
+2026-10-03 14:32:39,964 [WARNING] [REAL GUARD] tb2 motion blocked: offline (odom stale)
+2026-10-03 14:32:39,987 [INFO] connection open
+2026-10-03 14:32:39,987 [INFO] connection open
+2026-10-03 14:32:39,988 [INFO] [tb1] rosbridge connected ws://127.0.0.1:19191 topics={'cmd_vel': '/cmd_vel', 'odom': '/odom', 'scan': '/scan'}
+2026-10-03 14:32:39,989 [INFO] [tb2] rosbridge connected ws://127.0.0.1:19192 topics={'cmd_vel': '/cmd_vel', 'odom': '/odom', 'scan': '/scan'}
+2026-10-03 14:32:40,039 [INFO] [REAL GUARD] tb1 clear
+2026-10-03 14:32:40,039 [INFO] [REAL GUARD] tb2 clear
+2026-10-03 14:32:40,962 [INFO] connection open
+2026-10-03 14:32:40,962 [INFO] VR Client connected: ('127.0.0.1', 56725)
+2026-10-03 14:32:41,407 [WARNING] [CONTROL] Teleop handover tb1 -> tb2
+2026-10-03 14:32:42,654 [WARNING] [WATCHDOG] No cmd_vel for 0.5s -> tb2 stopped
+2026-10-03 14:32:43,309 [WARNING] [REAL GUARD] tb2 motion blocked: front 0.25m
+2026-10-03 14:32:43,703 [INFO] [REAL GUARD] tb2 clear
+2026-10-03 14:32:44,555 [WARNING] [WATCHDOG] No cmd_vel for 0.5s -> tb2 stopped
+2026-10-03 14:32:44,602 [WARNING] [REAL GUARD] tb2 motion blocked: offline (odom stale)
+2026-10-03 14:32:45,585 [WARNING] [CONTROL] Teleop handover tb2 -> tb1
+2026-10-03 14:32:45,685 [INFO] [REAL GUARD] tb2 clear
+2026-10-03 14:32:45,902 [WARNING] [OBSTACLE] tb1 정지 — 조작자 개입 필요: LIDAR OBSTACLE (0.30m), 추천 탈출 -35° (1.5m)
+2026-10-03 14:32:50,012 [WARNING] [REAL GUARD] tb1 motion blocked: rear 0.15m
+2026-10-03 14:32:50,070 [INFO] [REAL GUARD] tb1 clear
+2026-10-03 14:32:50,363 [WARNING] [REAL GUARD] tb1 motion blocked: rear 0.15m
+2026-10-03 14:32:50,760 [INFO] [REAL GUARD] tb1 clear
+2026-10-03 14:32:50,804 [INFO] [OBSTACLE] tb1 인터록 해제 → 주행 가능
+2026-10-03 14:32:51,201 [WARNING] [WATCHDOG] No cmd_vel for 0.5s -> tb1 stopped
+2026-10-03 14:32:51,955 [INFO] [AUTO] tb1 배회 구역 중심 고정 (0.00, 0.00), 반경 0.6m
+2026-10-03 14:32:51,955 [WARNING] [AUTO] tb1 시작/재개 (operator AUTO command)
+2026-10-03 14:32:54,968 [WARNING] [OBSTACLE] tb1 정지 — 조작자 개입 필요: LIDAR OBSTACLE (0.30m), 추천 탈출 -35° (1.5m)
+2026-10-03 14:32:54,968 [WARNING] [AUTO] tb1 STUCK — 조작자 개입 필요: LIDAR OBSTACLE (0.30m)
+2026-10-03 14:32:56,101 [INFO] [OBSTACLE] tb1 인터록 해제 → 주행 가능
+2026-10-03 14:32:57,319 [WARNING] [AUTO] tb1 시작/재개 (operator AUTO command)
+2026-10-03 14:32:58,043 [WARNING] [AUTO] tb1 OFF → MANUAL (operator input)
+2026-10-03 14:32:58,677 [WARNING] [AUTO] tb1 시작/재개 (operator AUTO command)
+2026-10-03 14:33:00,860 [WARNING] [AUTO] tb1 STUCK — 조작자 개입 필요: dead end - no clear path
+2026-10-03 14:33:02,043 [WARNING] [AUTO] tb1 시작/재개 (operator AUTO command)
+2026-10-03 14:33:08,445 [WARNING] [AUTO] tb1 STUCK — 조작자 개입 필요: avoid timeout 6s
+2026-10-03 14:33:09,388 [WARNING] [AUTO] tb1 시작/재개 (operator AUTO command)
+2026-10-03 14:33:09,700 [WARNING] [AUTO] tb1 OFF → MANUAL (operator STOP)
+2026-10-03 14:33:09,776 [WARNING] [WATCHDOG] No cmd_vel for 0.5s -> tb1 stopped
+2026-10-03 14:33:10,409 [WARNING] [AUTO] tb1 시작/재개 (operator AUTO command)
+2026-10-03 14:33:10,713 [WARNING] [AUTO] tb1 OFF → MANUAL (operator STOP)
+2026-10-03 14:33:12,123 [WARNING] [WATCHDOG] No cmd_vel for 0.5s -> tb1 stopped
+2026-10-03 14:33:13,172 [WARNING] [POSE] tb1 원점 재설정 → Unity (0.00, -0.75, 0°)
+2026-10-03 14:33:13,907 [WARNING] [POSE] tb1 원점 재설정 → Unity (2.00, 3.00, 90°)
+2026-10-03 14:33:14,932 [WARNING] [POSE] tb2 원점 재설정 → Unity (0.00, 0.75, 180°)
+2026-10-03 14:33:15,230 [WARNING] [OBSTACLE] tb1 정지 — 조작자 개입 필요: LIDAR OBSTACLE (0.30m), 추천 탈출 +70° (1.5m)
+2026-10-03 14:33:16,117 [INFO] [OBSTACLE] tb1 인터록 해제 → 주행 가능
+2026-10-03 14:33:16,783 [WARNING] [AUTO] tb1 시작/재개 (operator AUTO command)
+2026-10-03 14:33:17,088 [WARNING] [AUTO] tb1 OFF → MANUAL (operator STOP)
+2026-10-03 14:33:17,801 [WARNING] [POSE] tb2 원점 재설정 → Unity (2.50, 3.80, 180°)
+2026-10-03 14:33:17,921 [WARNING] [OBSTACLE] tb1 정지 — 조작자 개입 필요: COLLISION RISK: TB2 AGV (0.80m), 추천 탈출 +0° (1.5m)
+2026-10-03 14:33:19,049 [WARNING] [POSE] tb2 원점 재설정 → Unity (2.50, 6.00, 180°)
+2026-10-03 14:33:19,130 [INFO] [OBSTACLE] tb1 인터록 해제 → 주행 가능
+2026-10-03 14:33:19,530 [WARNING] [WATCHDOG] No cmd_vel for 0.5s -> tb1 stopped
+2026-10-03 14:33:19,860 [WARNING] [POSE] tb1 원점 재설정 → Unity (0.00, 0.00, 0°)
+2026-10-03 14:33:19,861 [WARNING] [POSE] tb2 원점 재설정 → Unity (0.00, 3.00, 180°)
+2026-10-03 14:33:20,181 [WARNING] [AUTO] tb1 시작/재개 (operator AUTO command)
+2026-10-03 14:33:20,479 [INFO] [AUTO] tb2 배회 구역 중심 고정 (-2.00, 0.20), 반경 0.6m
+2026-10-03 14:33:20,479 [WARNING] [AUTO] tb2 시작/재개 (operator AUTO command)
+2026-10-03 14:33:21,813 [WARNING] [POSE] tb2 원점 재설정 → Unity (0.00, 0.80, 180°)
+2026-10-03 14:33:21,852 [WARNING] [AUTO] tb2 STUCK — 조작자 개입 필요: COLLISION RISK: TB1 AGV (0.80m)
+2026-10-03 14:33:21,900 [WARNING] [OBSTACLE] tb1 정지 — 조작자 개입 필요: COLLISION RISK: TB2 AGV (0.80m), 추천 탈출 +0° (1.5m)
+2026-10-03 14:33:21,900 [WARNING] [AUTO] tb1 STUCK — 조작자 개입 필요: COLLISION RISK: TB2 AGV (0.80m)
+2026-10-03 14:33:22,937 [WARNING] [CONTROL] Teleop handover tb1 -> tb2
+2026-10-03 14:33:22,937 [INFO] [Perspective Mode]: FPV robot=tb2
+2026-10-03 14:33:22,937 [WARNING] [AUTO] tb2 OFF → MANUAL (operator entered cockpit)
+2026-10-03 14:33:24,966 [WARNING] [WATCHDOG] No cmd_vel for 0.5s -> tb2 stopped
+2026-10-03 14:33:25,205 [WARNING] [POSE] tb2 원점 재설정 → Unity (0.00, 3.00, 180°)
+2026-10-03 14:33:25,308 [INFO] [OBSTACLE] tb1 인터록 해제 → 주행 가능
+2026-10-03 14:33:26,033 [WARNING] [AUTO] tb1 시작/재개 (operator AUTO command)
+2026-10-03 14:33:26,339 [WARNING] [AUTO] tb2 시작/재개 (operator AUTO command)
+2026-10-03 14:33:27,066 [INFO] [Perspective Mode]: FPV robot=tb1
+2026-10-03 14:33:27,066 [WARNING] [AUTO] tb1 OFF → MANUAL (operator entered cockpit)
+2026-10-03 14:33:27,784 [WARNING] [AUTO] tb2 OFF → MANUAL (operator AUTO command)
+2026-10-03 14:33:28,088 [WARNING] [CONTROL] Teleop handover tb2 -> tb1
+2026-10-03 14:33:28,289 [WARNING] [AUTO] tb1 시작/재개 (operator AUTO command)
+2026-10-03 14:33:38,571 [WARNING] [AUTO] tb1 OFF → MANUAL (client disconnected)
+2026-10-03 14:33:38,572 [INFO] connection closed
+2026-10-03 14:33:38,879 [INFO] connection closed
+2026-10-03 14:33:38,879 [INFO] connection closed
+2026-10-03 14:33:38,879 [INFO] server closing
+2026-10-03 14:33:38,879 [INFO] server closing
 [0] 좌표 변환 단위 검증
-  [PASS] tb2 스폰(180°)에서 odom 전방 1m → Unity z 감소
+  [PASS] tb2 스폰(180°)에서 odom 전방 1m → Unity z 1m 감소
   [PASS] odom 좌측 1m·좌회전 90° → Unity x=-1, yaw=270
 [0b] 탈출 경로 플래너 단위 검증
   [PASS] 사방 막힘 → 추천 없음
@@ -107,7 +107,7 @@ C:\Users\hun\OneDrive - 국립한국해양대학교\바탕 화면\대회_프로�
   [PASS] tb2 ROS2 타입으로 odom subscribe
 [2] 텔레메트리 실기 반영
   [PASS] tb2 source=real, online=true
-  [PASS] tb2 포즈 = odom 변환값 (2.0, 4.5, 90.0)
+  [PASS] tb2 포즈 = odom 변환값 (0.2, 2.75, 90.0)
   [PASS] front_min/rear_min 섹터 계산 (무효값 0.0·None 제외)
 [3] TB2 텔레옵 → cmd_vel (속도 상한)
   [PASS] 0.22 지령 → 0.15 m/s로 제한되어 송신
@@ -139,7 +139,7 @@ C:\Users\hun\OneDrive - 국립한국해양대학교\바탕 화면\대회_프로�
   [PASS] STUCK 유지 중 정지
   [PASS] AUTO 재개 → CRUISE
   [PASS] WASD/썸스틱 입력 → 즉시 MANUAL
-[9b] 배회 구역 1.5m 복귀
+[9b] 배회 구역 0.6m 복귀
   [PASS] 구역 이탈 → RETURN
   [PASS] 중심이 뒤쪽 → 제자리 최대 회전
   [PASS] 구역 안 복귀 → CRUISE
@@ -152,12 +152,12 @@ C:\Users\hun\OneDrive - 국립한국해양대학교\바탕 화면\대회_프로�
   [PASS] STOP 명령 → MANUAL
 [10] 경로 추천·LiDAR 점 텔레메트리 + 위치 원점 재설정 (T-019)
   [PASS] 사방 2m 열림 → 추천 GREEN
-  [PASS] 추천 궤적 시작점이 로봇 앞 (+z): (0.0, 0.05)
+  [PASS] 추천 궤적 시작점이 로봇 앞 (+z): (0.0, -0.7) / 로봇 (0.0, -0.75)
   [PASS] LiDAR 점 179개 (≤180)
   [PASS] 정지 중 예상 궤적 없음
-  [PASS] 좌회전 지령 → 예상 궤적 끝 x<0 (Unity 좌측): [-0.46, 0.31]
+  [PASS] 좌회전 지령 → 예상 궤적 끝 x<0 (Unity 좌측): [-0.46, -0.44]
   [PASS] 재설정 전: odom 이동만큼 스폰에서 벗어남
-  [PASS] RESET_POSE → 스폰 포즈 (0.0, 0.0, 0.0)
+  [PASS] RESET_POSE → 스폰 포즈 (0.0, -0.75, 0.0)
   [PASS] 기준 (2,3,90°) 재설정 후 0.5m 전진 → (2.5, 3.0, 90.0) ≈ (2.5, 3.0, 90)
 [10b] 전진 막힘 → 제자리 선회 후 직진 추천 텔레메트리 (T-024)
   [PASS] mode=PIVOT 선회 좌, 직진 점 24개

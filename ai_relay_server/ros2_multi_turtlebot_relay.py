@@ -49,7 +49,7 @@ AUTO_ALIGNED_RAD = math.radians(20)   # 목표 방향 오차 이내면 전진하
 AUTO_TURN_GAIN = 1.2                  # 조향 각속도 = 이득 × 방향 오차 (rad/s per rad)
 AUTO_MAX_TURN = 0.8                   # 조향 각속도 상한 (rad/s)
 AUTO_AVOID_TIMEOUT_S = 6.0            # AVOID 지속 한도 → STUCK (맴돌기 방지)
-AUTO_GEOFENCE_RADIUS_M = 1.5          # 배회 구역 반경 (첫 AUTO 진입 위치 기준)
+AUTO_GEOFENCE_RADIUS_M = 0.6          # 배회 구역 반경 (첫 AUTO 진입 위치 기준, T-029 실측 통로 0.712×2.317m)
 AUTO_GEOFENCE_REENTER_RATIO = 0.7     # 복귀 후 이 비율 안쪽이면 CRUISE (히스테리시스)
 AUTO_MANUAL_OVERRIDE_EPS = 0.01       # 이 크기 초과 조작 입력 = 조작자 개입
 
@@ -90,8 +90,9 @@ DEFAULT_CONTROLLED_ROBOT = "tb1"
 # --- T-012: 실기체 브리지 (rosbridge) ---
 # 스폰 포즈 (Unity x, z, yaw도). 실기체는 전원 투입 위치 = odom 원점 → 이 포즈에 정렬.
 SPAWN_POSES: Dict[str, Tuple[float, float, float]] = {
-    "tb1": (0.0, 0.0, 0.0),
-    "tb2": (1.8, 5.0, 180.0),
+    # T-029 실측 통로(0.712 × 2.317 m) 중앙선 1.50m 대향. Unity SceneSetupAutomation 스폰과 동일해야 함
+    "tb1": (0.0, -0.75, 0.0),
+    "tb2": (0.0, 0.75, 180.0),
 }
 ODOM_STALE_S = 0.5                    # odom 무수신 → offline → 지령 0
 SCAN_STALE_S = 1.0                    # scan 무수신 → LiDAR 가드 판단 불가
@@ -109,6 +110,10 @@ SOURCE_REAL = "real"
 # --- T-019: 경로 추천·LiDAR 점 텔레메트리, 위치 원점 재설정 ---
 SCAN_TELEMETRY_MAX_POINTS = 180       # Unity로 보내는 LiDAR 점 상한 (360점 → 2:1 솎음)
 TELEMETRY_LOG_INTERVAL_TICKS = 20     # 운행 이력 JSONL 기록 간격 (20Hz 기준 1초)
+SIM_PATROL_SPEED = 0.22               # 가상 tb2 순찰 속도 (m/s)
+SIM_PATROL_LEG_S = 2.0                # 직진 구간 (0.44m)
+SIM_PATROL_TURN_S = 2.0               # 180° 회전 시간
+CONTROL_PERIOD_S = 0.05               # 안전 게이트·cmd_vel·텔레메트리 주기 (20 Hz, 마감 시각 기준 고정 주기)
 NO_LEVEL = "NONE"
 
 
@@ -220,7 +225,7 @@ class MultiTurtleBotRelay:
 
         # tb2 자율 순찰 변수 (웨이포인트 순환)
         self.tb2_patrol_timer = 0.0
-        
+
         # 안전 인터록 상태
         self.safety_interlock = False
         self.hazard_info = {"status": "NORMAL", "class": "", "distance": 999.0}
@@ -248,7 +253,7 @@ class MultiTurtleBotRelay:
         self.connected_vr_clients: Dict[object, asyncio.Event] = {}
         self.latest_frame_jpeg = None
         self.latest_telemetry_json = ""
-        
+
         # YOLOv8 로드
         self.model = None
         if self.use_ai:
@@ -270,20 +275,12 @@ class MultiTurtleBotRelay:
             self.tb2.angular_vel = 0.0
             return
         self.tb2_patrol_timer += dt
-        # 직선 왕복 및 회전 시뮬레이션
-        cycle = self.tb2_patrol_timer % 16.0
-        if cycle < 6.0:
-            self.tb2.linear_vel = 0.22  # 전진
-            self.tb2.angular_vel = 0.0
-        elif cycle < 8.0:
-            self.tb2.linear_vel = 0.0
-            self.tb2.angular_vel = 1.57 # 180도 회전
-        elif cycle < 14.0:
-            self.tb2.linear_vel = 0.22  # 복귀 전진
-            self.tb2.angular_vel = 0.0
-        else:
-            self.tb2.linear_vel = 0.0
-            self.tb2.angular_vel = 1.57 # 원위치 회전
+        # 직선 왕복 + 180° 회전 (T-029: 2.32m 통로 안, tb1과 1.0m 이상 유지하는 짧은 구간)
+        leg, turn = SIM_PATROL_LEG_S, SIM_PATROL_TURN_S
+        cycle = self.tb2_patrol_timer % (2 * (leg + turn))
+        moving = cycle < leg or leg + turn <= cycle < 2 * leg + turn
+        self.tb2.linear_vel = SIM_PATROL_SPEED if moving else 0.0
+        self.tb2.angular_vel = 0.0 if moving else math.pi / turn
 
     # ------------------------------------------------------------------
     # 안전 로직 (Claude 전용): T-015 장애물 정지·알림, T-006 cmd_vel 워치독,
@@ -722,12 +719,12 @@ class MultiTurtleBotRelay:
                 # 차선 라인
                 cv2.line(frame, (80, 480), (280, 240), (0, 200, 255), 3)
                 cv2.line(frame, (560, 480), (360, 240), (0, 200, 255), 3)
-                
+
                 # 거리 계산: tb1과 tb2의 상대적 거리
                 dx = self.tb2.x - self.tb1.x
                 dz = self.tb2.z - self.tb1.z
                 dist_tb1_tb2 = math.sqrt(dx*dx + dz*dz)
-                
+
                 # 가상 tb2 (보조 로봇) 렌더링
                 if dz > 0.5 and dz < 8.0 and abs(dx) < 2.5:
                     # 원근법 투영
@@ -736,12 +733,12 @@ class MultiTurtleBotRelay:
                     box_h = int(180 * scale)
                     center_x = int(320 + (dx / dz) * 300)
                     center_y = int(240 + 120 * scale)
-                    
+
                     x1 = max(0, center_x - box_w // 2)
                     y1 = max(0, center_y - box_h // 2)
                     x2 = min(640, center_x + box_w // 2)
                     y2 = min(480, center_y + box_h // 2)
-                    
+
                     # tb2 바디 렌더링
                     cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 140, 0), -1)
                     cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 255, 255), 2)
@@ -756,7 +753,7 @@ class MultiTurtleBotRelay:
 
             # tb1과 tb2의 물리적 거리 계산
             dist_to_tb2 = math.sqrt((self.tb2.x - self.tb1.x)**2 + (self.tb2.z - self.tb1.z)**2)
-            
+
             if self.model is not None and frame is not None:
                 # 0: 사람, 2,3,5,7: 차량/이동체, 24,26,28: 가방/화물, 56: 의자/장애물
                 target_classes = [0, 1, 2, 3, 5, 7, 24, 26, 28, 56, 57]
@@ -767,21 +764,21 @@ class MultiTurtleBotRelay:
                         conf = float(box.conf[0])
                         cls_id = int(box.cls[0])
                         cls_name = self.model.names.get(cls_id, "Obstacle")
-                        
+
                         center_x = (bx1 + bx2) // 2
                         box_height = by2 - by1
-                        
+
                         # 전방 충돌 회랑 (Corridor: 중앙 50%, 근접 거리)
                         in_corridor = (180 <= center_x <= 460) and (by2 > 220)
-                        
+
                         if in_corridor and box_height > 80 and conf > 0.40:
                             vision_hazard = f"HAZARD: {cls_name}"
                             cv2.rectangle(frame, (bx1, by1), (bx2, by2), (0, 0, 255), 3)
-                            cv2.putText(frame, f"INTERLOCK: {cls_name} ({conf:.2f})", 
+                            cv2.putText(frame, f"INTERLOCK: {cls_name} ({conf:.2f})",
                                         (bx1, max(by1 - 10, 25)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
                         else:
                             cv2.rectangle(frame, (bx1, by1), (bx2, by2), (0, 255, 0), 2)
-                            cv2.putText(frame, f"{cls_name} {conf:.2f}", 
+                            cv2.putText(frame, f"{cls_name} {conf:.2f}",
                                         (bx1, max(by1 - 5, 15)), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 0), 1)
 
             self.vision_hazard = vision_hazard
@@ -857,15 +854,16 @@ class MultiTurtleBotRelay:
                 cv2.putText(frame, "ROS 2 Humble Multi-Agent Teleop", (20, 90),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 200, 255), 1)
 
-            # JPEG 인코딩 및 버퍼 갱신
-            _, jpeg_buf = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 70])
+            # JPEG 인코딩 및 버퍼 갱신 — 스레드에서 (이벤트 루프 블로킹 시 20 Hz 제어 루프 지터)
+            _, jpeg_buf = await asyncio.to_thread(cv2.imencode, ".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 70])
             self.latest_frame_jpeg = jpeg_buf.tobytes()
 
             await asyncio.sleep(0.033) # 30 FPS
 
     async def telemetry_loop(self):
         """Unity 6로 tb1 및 tb2 오도메트리/상태 JSON 실시간 전송 (20Hz)"""
-        dt = 0.05
+        dt = CONTROL_PERIOD_S
+        next_tick = time.monotonic()
         while True:
             # 안전 게이트 (장애물 정지 → 워치독 → tb2 거리 인터록) 후 물리 갱신
             now = time.monotonic()
@@ -931,7 +929,13 @@ class MultiTurtleBotRelay:
             for telemetry_ready in self.connected_vr_clients.values():
                 telemetry_ready.set()
 
-            await asyncio.sleep(dt)
+            # 고정 주기: 처리 시간만큼 대기를 줄여 20 Hz 유지. 밀리면 따라잡지 않고 기준을 현재로 재설정
+            next_tick += dt
+            delay = next_tick - time.monotonic()
+            if delay < 0:
+                next_tick = time.monotonic()
+                delay = 0.0
+            await asyncio.sleep(delay)
 
     async def vr_ws_handler(self, websocket):
         """Meta Quest 2 VR 클라이언트 웹소켓 통신 핸들러"""
@@ -980,7 +984,7 @@ class MultiTurtleBotRelay:
                         # -220~+220 -> -0.22 m/s ~ +0.22 m/s 변환
                         forward_ratio = (left + right) / 440.0
                         turn_ratio = (left - right) / 440.0
-                        
+
                         lin = forward_ratio * 0.22
                         ang = turn_ratio * 2.84
 

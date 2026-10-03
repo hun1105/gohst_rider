@@ -14,7 +14,8 @@ import websockets
 from websockets.server import serve
 
 from ros2_multi_turtlebot_relay import (
-    AUTO_AVOID_SPEED, AUTO_AVOID_TIMEOUT_S, AUTO_CRUISE_SPEED, AUTO_MAX_TURN,
+    AUTO_AVOID_SPEED, AUTO_AVOID_TIMEOUT_S, AUTO_CRUISE_SPEED, AUTO_GEOFENCE_RADIUS_M,
+    AUTO_GEOFENCE_REENTER_RATIO, AUTO_MAX_TURN,
     LIDAR_REAR_GUARD_M, REAL_MAX_LINEAR_DEFAULT, SPAWN_POSES, MultiTurtleBotRelay, odom_to_unity,
 )
 from escape_planner import ScanData, _valid_points, plan_escape
@@ -23,7 +24,7 @@ from rosbridge_link import RosbridgeLink, sector_min_range
 
 TB1_PORT, TB2_PORT, RELAY_PORT = 19191, 19192, 19193
 TICK_S = 0.05
-TB2_ODOM = (0.5, 0.2, math.pi / 2)   # ROS x, y, yaw
+TB2_ODOM = (-2.0, 0.2, math.pi / 2)   # ROS x, y, yaw — 스폰 뒤쪽 2m: tb1 단독 시험 중 AGV 간 1.0m 인터록 배제
 
 
 class FakeRosbridge:
@@ -103,9 +104,10 @@ async def drive(ws, robot: str, lin: float, ang: float, seconds: float):
 
 async def main():
     print("[0] 좌표 변환 단위 검증")
+    sx, sz, _ = SPAWN_POSES["tb2"]
     x, z, yaw = odom_to_unity(1.0, 0.0, 0.0, SPAWN_POSES["tb2"])
-    check(abs(x - 1.8) < 1e-6 and abs(z - 4.0) < 1e-6 and abs(yaw - 180.0) < 1e-6,
-          "tb2 스폰(180°)에서 odom 전방 1m → Unity z 감소")
+    check(abs(x - sx) < 1e-6 and abs(z - (sz - 1.0)) < 1e-6 and abs(yaw - 180.0) < 1e-6,
+          "tb2 스폰(180°)에서 odom 전방 1m → Unity z 1m 감소")
     x, z, yaw = odom_to_unity(0.0, 1.0, math.pi / 2, (0.0, 0.0, 0.0))
     check(abs(x + 1.0) < 1e-6 and abs(z) < 1e-6 and abs(yaw - 270.0) < 1e-6,
           "odom 좌측 1m·좌회전 90° → Unity x=-1, yaw=270")
@@ -280,16 +282,16 @@ async def main():
         t = await telemetry(ws)
         check(t["mode"] == "MANUAL" and t["auto_state"] == "OFF", "WASD/썸스틱 입력 → 즉시 MANUAL")
 
-        print("[9b] 배회 구역 1.5m 복귀")
+        print(f"[9b] 배회 구역 {AUTO_GEOFENCE_RADIUS_M}m 복귀")
         await auto_cmd(True)
-        tb1.odom = (2.0, 0.0, 0.0)   # 중심(0,0)에서 2.0m, 중심은 등 뒤
+        tb1.odom = (AUTO_GEOFENCE_RADIUS_M * 1.3, 0.0, 0.0)   # 반경 밖, 중심은 등 뒤
         await asyncio.sleep(0.3)
         t = await telemetry(ws)
         cmds = await last_cmds()
         check(t["auto_state"] == "RETURN", f"구역 이탈 → {t['auto_state']}")
         check(cmds and all(l == 0.0 and abs(abs(a) - AUTO_MAX_TURN) < 1e-6 for l, a in cmds),
               "중심이 뒤쪽 → 제자리 최대 회전")
-        tb1.odom = (1.0, 0.0, math.pi)   # 중심 방향, 반경 70% 안
+        tb1.odom = (AUTO_GEOFENCE_RADIUS_M * AUTO_GEOFENCE_REENTER_RATIO * 0.8, 0.0, math.pi)   # 중심 방향, 재진입 반경 안
         await asyncio.sleep(0.3)
         t = await telemetry(ws)
         check(t["auto_state"] == "CRUISE", "구역 안 복귀 → CRUISE")
@@ -330,7 +332,8 @@ async def main():
         path = t["path"]
         check(path["recommended_level"] == "GREEN" and len(path["recommended"]) >= 4, f"사방 2m 열림 → 추천 {path['recommended_level']}")
         x0, z0 = path["recommended"][0], path["recommended"][1]
-        check(abs(x0) < 0.02 and 0.0 < z0 < 0.1, f"추천 궤적 시작점이 로봇 앞 (+z): ({x0}, {z0})")
+        rx, rz = t["tb1"]["x"], t["tb1"]["z"]
+        check(abs(x0 - rx) < 0.02 and 0.0 < z0 - rz < 0.1, f"추천 궤적 시작점이 로봇 앞 (+z): ({x0}, {z0}) / 로봇 ({rx}, {rz})")
         check(0 < len(t["scan"]) <= 360 and len(t["scan"]) % 2 == 0, f"LiDAR 점 {len(t['scan']) // 2}개 (≤180)")
         check(path["predicted"] == [] and path["predicted_level"] == "NONE", "정지 중 예상 궤적 없음")
         await ws.send(json.dumps({"cmd": "TWIST", "robot": "tb1", "linear": 0.1, "angular": 0.5}))
@@ -347,7 +350,8 @@ async def main():
         await asyncio.sleep(0.3)
         t = await telemetry(ws)
         r1 = t["tb1"]
-        check(abs(r1["x"]) < 0.01 and abs(r1["z"]) < 0.01 and min(r1["yaw"], 360 - r1["yaw"]) < 0.5,
+        s1x, s1z, _ = SPAWN_POSES["tb1"]
+        check(abs(r1["x"] - s1x) < 0.01 and abs(r1["z"] - s1z) < 0.01 and min(r1["yaw"], 360 - r1["yaw"]) < 0.5,
               f"RESET_POSE → 스폰 포즈 ({r1['x']}, {r1['z']}, {r1['yaw']})")
         await ws.send(json.dumps({"cmd": "RESET_POSE", "robot": "tb1", "x": 2.0, "z": 3.0, "yaw": 90.0}))
         await asyncio.sleep(0.3)
