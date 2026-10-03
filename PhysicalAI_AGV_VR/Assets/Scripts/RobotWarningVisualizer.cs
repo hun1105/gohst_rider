@@ -39,7 +39,7 @@ namespace PhysicalAI.VR
         [Tooltip("인터록 시 로봇 아래 바닥 적색 원판 표시")]
         public bool showDangerDisc = true;
         [Tooltip("위험 원판 반경 (m) — LiDAR 전방 가드 0.35m 기준")]
-        public float dangerDiscRadius = 0.2f;   // T-029: 0.712m 통로 폭 안 (Burger 외접 반경 0.105m + 여유)
+        public float dangerDiscRadius = 0.2f;   // T-029: 0.445m 통로 폭 안 (Burger 외접 반경 0.105m + 여유)
         public float dangerDiscThickness = 0.004f;
         public float dangerDiscHeight = 0.003f;
 

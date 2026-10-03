@@ -49,7 +49,7 @@ AUTO_ALIGNED_RAD = math.radians(20)   # 목표 방향 오차 이내면 전진하
 AUTO_TURN_GAIN = 1.2                  # 조향 각속도 = 이득 × 방향 오차 (rad/s per rad)
 AUTO_MAX_TURN = 0.8                   # 조향 각속도 상한 (rad/s)
 AUTO_AVOID_TIMEOUT_S = 6.0            # AVOID 지속 한도 → STUCK (맴돌기 방지)
-AUTO_GEOFENCE_RADIUS_M = 0.6          # 배회 구역 반경 (첫 AUTO 진입 위치 기준, T-029 실측 통로 0.712×2.317m)
+AUTO_GEOFENCE_RADIUS_M = 0.6          # 배회 구역 반경 (첫 AUTO 진입 위치 기준, T-029 실측 통로 0.445×2.317m)
 AUTO_GEOFENCE_REENTER_RATIO = 0.7     # 복귀 후 이 비율 안쪽이면 CRUISE (히스테리시스)
 AUTO_MANUAL_OVERRIDE_EPS = 0.01       # 이 크기 초과 조작 입력 = 조작자 개입
 
@@ -90,7 +90,7 @@ DEFAULT_CONTROLLED_ROBOT = "tb1"
 # --- T-012: 실기체 브리지 (rosbridge) ---
 # 스폰 포즈 (Unity x, z, yaw도). 실기체는 전원 투입 위치 = odom 원점 → 이 포즈에 정렬.
 SPAWN_POSES: Dict[str, Tuple[float, float, float]] = {
-    # T-029 실측 통로(0.712 × 2.317 m) 중앙선 1.50m 대향. Unity SceneSetupAutomation 스폰과 동일해야 함
+    # T-029 실측 통로(0.445 × 2.317 m) 중앙선 1.50m 대향. Unity SceneSetupAutomation 스폰과 동일해야 함
     "tb1": (0.0, -0.75, 0.0),
     "tb2": (0.0, 0.75, 180.0),
 }

@@ -34,3 +34,4 @@
 | T-027 | 공식 양식 기준 최종 산출물: 보고서(표지+5쪽 목차), 기술설명서 14항목 1쪽, 발표 10장, 콘티 5막 2:50, 별지2 출처·AI 신고서, 검증된 통계(KOSHA·고용노동부·Siemens) 반영, 패키징 대학부_32_팀장명.zip·비밀정보 검사 | claude | review | agent/claude | docs/SOURCE_AI_DISCLOSURE.md |
 | T-028 | 릴레이 스트레스 10회(730/730)·300초 부하 시험(soak_test.py), 제어 루프 고정 주기 15.8→20 Hz, JPEG 인코딩 스레드화, 패키징 사전 검증 | claude | review | agent/claude | docs/NIGHTLY_RESULT_20261003.md |
 | T-029 | Unity 맵 실측 1:1 초협소 통로(0.712×2.317 m, 벽 4면, 랙·작업자 제거), 스폰 1.50m 대향(Unity·릴레이 동일), God-View 3.5m·직교 1.45, 가상 tb2 순찰 통로 내 축소 | claude | review | agent/claude | docs/PROTOCOL.md |
+| T-030 | 통로 가로 0.712 → 0.445m (Burger 전폭 × 2.5), 단일 차선 | claude | review | agent/claude | - |

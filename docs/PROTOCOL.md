@@ -62,7 +62,7 @@
 | stop_reason | string | - | 정지 원인 문구 (예: `COLLISION RISK: TB1 AGV (0.80m)`, `AUTO STUCK: …`). 정상 `""` (T-025) |
 
 - `real` 좌표 변환: ROS odom(x 전방, y 좌측, yaw 반시계) → Unity(`z` = 전방, `x` = 우측, `yaw` 시계방향 도). 로봇별 스폰 포즈(시뮬레이션 초기 위치)를 원점 오프셋으로 적용.
-- 스폰 포즈 (T-029, 실측 통로 0.712 × 2.317 m 1:1): `tb1` (x 0, z −0.75, 0°), `tb2` (x 0, z +0.75, 180°) — 통로 중앙선 1.50m 대향. Unity `SceneSetupAutomation` 스폰과 동일.
+- 스폰 포즈 (T-029, 실측 통로 0.445 × 2.317 m 1:1): `tb1` (x 0, z −0.75, 0°), `tb2` (x 0, z +0.75, 180°) — 통로 중앙선 1.50m 대향. Unity `SceneSetupAutomation` 스폰과 동일.
 - `linear_vel`/`angular_vel`은 안전 게이트 통과 후 **지령값** (측정값 아님).
 
 ### 안전 상태 객체 (`safety`)

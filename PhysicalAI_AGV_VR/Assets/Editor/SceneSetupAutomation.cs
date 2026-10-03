@@ -15,8 +15,8 @@ namespace PhysicalAI.EditorTools
         private const float PickColliderHeight = 0.4f;
 
         // T-029 실측 1:1 초협소 통로 테스트베드
-        //   세로(Z) = Galaxy S20 FE 159.8mm × 14.5 = 2.317m, 가로(X) = Burger 전폭 178mm × 4 = 0.712m
-        private const float CorridorWidth = 0.712f;
+        //   세로(Z) = Galaxy S20 FE 159.8mm × 14.5 = 2.317m, 가로(X) = Burger 전폭 178mm × 2.5 = 0.445m
+        private const float CorridorWidth = 0.445f;
         private const float CorridorLength = 2.317f;
         private const float FloorThickness = 0.1f;
         private const float WallHeight = 0.5f;
