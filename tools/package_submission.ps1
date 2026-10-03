@@ -6,7 +6,7 @@
 #   ├─ 2_완료보고서/             REPORT_5P.docx (표지 제외 5쪽 이내)
 #   ├─ 3_기술명세서_소스코드/     TECH_SPEC_1P.docx (1쪽) + source_code.zip (실행 순서 launch/README.md)
 #   ├─ 4_시연동영상/             -VideoPath (3분 이내 권장)
-#   ├─ 5_발표자료/               PRESENTATION_10SLIDES.pptx (10장 이내)
+#   ├─ 5_발표자료/               PRESENTATION_10SLIDES_VERCEL.pptx (10장 이내)
 #   ├─ 별지2_출처AI활용신고서/    SOURCE_AI_DISCLOSURE.docx
 #   ├─ 참고자료/                 문서 원본(md), PROTOCOL, 콘티, 자동 시험 기록(evidence)
 #   └─ MANIFEST.txt              파일별 SHA256, 커밋 해시, 미충족 항목
@@ -57,7 +57,7 @@ $Placeholders = @("[팀명]", "[팀장명]", "[팀원명]", "[발표자]")
 $Deliverables = [ordered]@{
     "2_완료보고서"           = @("docs/REPORT_5P.docx")
     "3_기술명세서_소스코드"   = @("docs/TECH_SPEC_1P.docx")
-    "5_발표자료"             = @("docs/PRESENTATION_10SLIDES.pptx")
+    "5_발표자료"             = @("docs/PRESENTATION_10SLIDES_VERCEL.pptx")
     "별지2_출처AI활용신고서"  = @("docs/SOURCE_AI_DISCLOSURE.docx")
 }
 $References = @("docs/REPORT_5P.md", "docs/TECH_SPEC_1P.md", "docs/PRESENTATION_10SLIDES.md",

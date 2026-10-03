@@ -32,3 +32,5 @@
 | T-025 | 실물 2대: AUTO 로봇별(tb2 포함), 콕핏 진입 = 그 로봇 MANUAL, 1.0m 만남 둘 다 정지·비켜주기, camera_robot, launch/ 폴더(TB1 기동·2대 릴레이 bat) | claude | review | agent/claude | docs/PROTOCOL.md, launch/README.md |
 | T-026 | TB1 실물 세팅: SD 부트 설정(olleh Wi-Fi, ubuntu/user, rosbridge 자동 설치) → 172.30.1.58 고정 IP(netplan, cloud-init 네트워크 관리 끔, 재부팅 유지 확인)·ROS 토픽 확인, 깨진 sudoers(NUL 바이트) 복구, LD08 range_min=0.0 무효값 하한 0.12m 수정 | claude | review | agent/claude | launch/ |
 | T-027 | 공식 양식 기준 최종 산출물: 보고서(표지+5쪽 목차), 기술설명서 14항목 1쪽, 발표 10장, 콘티 5막 2:50, 별지2 출처·AI 신고서, 검증된 통계(KOSHA·고용노동부·Siemens) 반영, 패키징 대학부_32_팀장명.zip·비밀정보 검사 | claude | review | agent/claude | docs/SOURCE_AI_DISCLOSURE.md |
+| T-028 | 릴레이 스트레스 10회(730/730)·300초 부하 시험(soak_test.py), 제어 루프 고정 주기 15.8→20 Hz, JPEG 인코딩 스레드화, 패키징 사전 검증 | claude | review | agent/claude | docs/NIGHTLY_RESULT_20261003.md |
+| T-029 | Unity 맵 실측 1:1 초협소 통로(0.712×2.317 m, 벽 4면, 랙·작업자 제거), 스폰 1.50m 대향(Unity·릴레이 동일), God-View 3.5m·직교 1.45, 가상 tb2 순찰 통로 내 축소 | claude | review | agent/claude | docs/PROTOCOL.md |

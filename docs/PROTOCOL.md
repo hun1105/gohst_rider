@@ -62,6 +62,7 @@
 | stop_reason | string | - | 정지 원인 문구 (예: `COLLISION RISK: TB1 AGV (0.80m)`, `AUTO STUCK: …`). 정상 `""` (T-025) |
 
 - `real` 좌표 변환: ROS odom(x 전방, y 좌측, yaw 반시계) → Unity(`z` = 전방, `x` = 우측, `yaw` 시계방향 도). 로봇별 스폰 포즈(시뮬레이션 초기 위치)를 원점 오프셋으로 적용.
+- 스폰 포즈 (T-029, 실측 통로 0.712 × 2.317 m 1:1): `tb1` (x 0, z −0.75, 0°), `tb2` (x 0, z +0.75, 180°) — 통로 중앙선 1.50m 대향. Unity `SceneSetupAutomation` 스폰과 동일.
 - `linear_vel`/`angular_vel`은 안전 게이트 통과 후 **지령값** (측정값 아님).
 
 ### 안전 상태 객체 (`safety`)
@@ -94,7 +95,7 @@
 ### 자율 배회 AUTO 규칙 (T-016 → T-025 로봇별)
 - 대상: 실기(`source=real`, `online`, LiDAR 수신) `tb1`·`tb2` 각각. 조건 미충족 시 해당 로봇 `AUTO` 요청 무시. 로봇마다 상태·배회 중심 따로.
 - 조종 권한(`controlled_robot`)과 무관하게 AUTO 로봇은 계속 배회. 권한 없는 MANUAL 실기 로봇은 정지 유지.
-- 배회 구역: 첫 AUTO 진입 시 오도메트리 위치 중심 반경 1.5m. 이탈 시 `RETURN`(중심 방향 조향), 반경 70% 안으로 들어오면 `CRUISE`. 클라이언트 연결 해제 시 중심 초기화.
+- 배회 구역: 첫 AUTO 진입 시 오도메트리 위치 중심 반경 0.6m (T-029 실측 통로). 이탈 시 `RETURN`(중심 방향 조향), 반경 70% 안으로 들어오면 `CRUISE`. 클라이언트 연결 해제 시 중심 초기화.
 - `CRUISE`: 0.10 m/s 직진. 전방 0.6m 이내 장애물 → `AVOID`: LiDAR 추천 탈출 방향으로 조향 (오차 20° 이내 0.05 m/s 전진, 초과 시 제자리 회전, 최대 0.8 rad/s).
 - `STUCK` 전환: 인터록(전방 0.35m, **로봇 간 1.0m 만남**, 카메라 로봇 YOLO) / 추천 경로 없음(막다른 길) / `AVOID` 6초 지속. 즉시 정지, `safety.reason`에 원인, 영상 배너·추천 경로 표시. **자동 재개 없음.**
 - 조작자 개입: 그 로봇 대상 0이 아닌 `TWIST`/`DRIVE`, `STOP`, **`TELEPORT` FPV(콕핏 진입)** → 그 로봇만 즉시 `MANUAL`. `AUTO` 재요청(Unity `R` / 퀘스트 Y) → `CRUISE` 재개 (막혀 있으면 곧바로 `STUCK`).
@@ -169,3 +170,5 @@
 | 2026-10-02 | `path.recommended_mode`·`pivot_deg`·`pivot_points`·`pivot_level` 추가 — 제자리 선회 후 직진 추천 (T-024) | claude |
 | 2026-10-02 | AUTO 로봇별(`tb2` 포함), 로봇 객체 `mode`·`auto_state`·`alert`·`stop_reason`, `camera_robot`, `path.robot`, 콕핏 진입 MANUAL, 로봇 간 만남 둘 다 정지 (T-025) | claude |
 | 2026-10-02 | LiDAR 유효 최소 거리 하한 0.12m (ROS 1 LD08 무효값 0.0 오판 방지) (T-026) | claude |
+| 2026-10-03 | 스폰 포즈 실측 통로 1:1 (tb1 z −0.75 / tb2 z +0.75 대향) (T-029) | claude |
+| 2026-10-03 | AUTO 배회 반경 1.5 → 0.6m (실측 통로) (T-029) | claude |
