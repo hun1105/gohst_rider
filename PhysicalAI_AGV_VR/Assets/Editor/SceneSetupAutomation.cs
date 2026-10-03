@@ -14,9 +14,23 @@ namespace PhysicalAI.EditorTools
         private const float PickColliderWidth = 0.6f;
         private const float PickColliderHeight = 0.4f;
 
-        // God-View: 게임 맵식 수직 탑다운 (두 로봇 스폰 (0,0)·(1.8,5) 중간 상공, 화면 위쪽 = +Z)
-        private static readonly Vector3 GodViewPosition = new Vector3(0.9f, 15f, 2.5f);
+        // T-029 실측 1:1 초협소 통로 테스트베드
+        //   세로(Z) = Galaxy S20 FE 159.8mm × 14.5 = 2.317m, 가로(X) = Burger 전폭 178mm × 4 = 0.712m
+        private const float CorridorWidth = 0.712f;
+        private const float CorridorLength = 2.317f;
+        private const float FloorThickness = 0.1f;
+        private const float WallHeight = 0.5f;
+        private const float WallThickness = 0.05f;
+
+        // 스폰: 통로 중앙선, 1.50m 간격 대향 (릴레이 SPAWN_POSES와 동일해야 함)
+        private static readonly Vector3 TB1SpawnPosition = new Vector3(0f, 0f, -0.75f);
+        private static readonly Vector3 TB2SpawnPosition = new Vector3(0f, 0f, 0.75f);
+        private const float TB2SpawnYaw = 180f;
+
+        // God-View: 통로 중앙 3.5m 상공 수직 탑다운 (화면 위쪽 = +Z). 직교 반높이 1.45m → 2.32m 통로 전체 + 여백
+        private static readonly Vector3 GodViewPosition = new Vector3(0f, 3.5f, 0f);
         private static readonly Vector3 GodViewEuler = new Vector3(90f, 0f, 0f);
+        private const float GodViewOrthoSize = 1.45f;
 
         static SceneSetupAutomation()
         {
@@ -60,88 +74,40 @@ namespace PhysicalAI.EditorTools
             GameObject oldRacks = GameObject.Find("Warehouse_Environment");
             if (oldRacks != null) Object.DestroyImmediate(oldRacks);
 
-            // 1. 바닥 생성 (Warehouse Floor: 30m x 30m)
-            GameObject floor = GameObject.CreatePrimitive(PrimitiveType.Plane);
+            // 1. 바닥: 실측 통로 1:1 (두께 0.1m 큐브, 윗면 = y 0)
+            GameObject floor = GameObject.CreatePrimitive(PrimitiveType.Cube);
             floor.name = "Warehouse_Floor";
-            floor.transform.position = Vector3.zero;
-            floor.transform.localScale = new Vector3(3, 1, 3);
+            floor.transform.position = new Vector3(0f, -FloorThickness * 0.5f, 0f);
+            floor.transform.localScale = new Vector3(CorridorWidth, FloorThickness, CorridorLength);
             Material floorMat = new Material(Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard"));
             floorMat.color = new Color(0.2f, 0.22f, 0.25f);
             floor.GetComponent<Renderer>().material = floorMat;
 
-            // 2. 창고 환경 구성 (선반 랙, 파렛트, 작업자 모델)
+            // 2. 통로 벽 4면 (선반 랙·작업자 더미 제거). 벽 중심선 = 바닥 가장자리
             GameObject env = new GameObject("Warehouse_Environment");
-            Material rackMat = new Material(Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard"));
-            rackMat.color = new Color(0.15f, 0.35f, 0.65f); // 물류 랙 블루
-
-            Material boxMat = new Material(Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard"));
-            boxMat.color = new Color(0.72f, 0.52f, 0.35f); // 박스/파렛트 브라운
-
-            Material vestMat = new Material(Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard"));
-            vestMat.color = new Color(1.0f, 0.6f, 0.0f); // 형광 주황 안전조끼
-
-            // 좌/우 랙 배치
-            for (int z = -4; z <= 12; z += 4)
-            {
-                // 좌측 랙
-                GameObject rackL = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                rackL.name = $"Rack_L_{z}";
-                rackL.transform.SetParent(env.transform);
-                rackL.transform.position = new Vector3(-3.5f, 1.5f, z);
-                rackL.transform.localScale = new Vector3(1.2f, 3.0f, 2.8f);
-                rackL.GetComponent<Renderer>().material = rackMat;
-
-                // 좌측 랙 박스 적재
-                GameObject boxL = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                boxL.name = $"Box_L_{z}";
-                boxL.transform.SetParent(env.transform);
-                boxL.transform.position = new Vector3(-3.5f, 3.3f, z);
-                boxL.transform.localScale = new Vector3(0.9f, 0.6f, 1.8f);
-                boxL.GetComponent<Renderer>().material = boxMat;
-
-                // 우측 랙
-                GameObject rackR = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                rackR.name = $"Rack_R_{z}";
-                rackR.transform.SetParent(env.transform);
-                rackR.transform.position = new Vector3(3.5f, 1.5f, z);
-                rackR.transform.localScale = new Vector3(1.2f, 3.0f, 2.8f);
-                rackR.GetComponent<Renderer>().material = rackMat;
-            }
-
-            // 전방 물류 작업자 (Worker Placeholder with Safety Vest)
-            GameObject worker = new GameObject("Warehouse_Worker_Target");
-            worker.transform.SetParent(env.transform);
-            worker.transform.position = new Vector3(0.0f, 0.0f, 8.5f);
-
-            GameObject workerBody = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            workerBody.name = "Worker_Body";
-            workerBody.transform.SetParent(worker.transform);
-            workerBody.transform.localPosition = new Vector3(0, 0.9f, 0);
-            workerBody.transform.localScale = new Vector3(0.45f, 0.9f, 0.45f);
-            workerBody.GetComponent<Renderer>().material = vestMat;
-
-            GameObject workerHead = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            workerHead.name = "Worker_Head";
-            workerHead.transform.SetParent(worker.transform);
-            workerHead.transform.localPosition = new Vector3(0, 1.65f, 0);
-            workerHead.transform.localScale = new Vector3(0.3f, 0.3f, 0.3f);
-            workerHead.GetComponent<Renderer>().material = boxMat;
+            Material wallMat = new Material(Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard"));
+            wallMat.color = new Color(0.55f, 0.58f, 0.62f);
+            float halfW = CorridorWidth * 0.5f, halfL = CorridorLength * 0.5f, wallY = WallHeight * 0.5f;
+            CreateWall(env, "Wall_L", new Vector3(-halfW, wallY, 0f), new Vector3(WallThickness, WallHeight, CorridorLength), wallMat);
+            CreateWall(env, "Wall_R", new Vector3(halfW, wallY, 0f), new Vector3(WallThickness, WallHeight, CorridorLength), wallMat);
+            CreateWall(env, "Wall_Back", new Vector3(0f, wallY, -halfL), new Vector3(CorridorWidth, WallHeight, WallThickness), wallMat);
+            CreateWall(env, "Wall_Front", new Vector3(0f, wallY, halfL), new Vector3(CorridorWidth, WallHeight, WallThickness), wallMat);
 
             // 3. TurtleBot3 Burger 2대 생성
             // TB1: 주행 AGV (Cyan 포인트)
             GameObject tb1 = TurtleBot3ModelBuilder.CreateTurtleBot3Burger(
-                "TurtleBot3_TB1_Main", 
-                Color.cyan, 
-                Vector3.zero, 
+                "TurtleBot3_TB1_Main",
+                Color.cyan,
+                TB1SpawnPosition,
                 Quaternion.identity
             );
 
             // TB2: 보조/순찰 AGV (Orange 포인트)
             GameObject tb2 = TurtleBot3ModelBuilder.CreateTurtleBot3Burger(
-                "TurtleBot3_TB2_Patrol", 
-                new Color(1.0f, 0.5f, 0.0f), 
-                new Vector3(1.8f, 0.0f, 4.0f), 
-                Quaternion.Euler(0, 180, 0)
+                "TurtleBot3_TB2_Patrol",
+                new Color(1.0f, 0.5f, 0.0f),
+                TB2SpawnPosition,
+                Quaternion.Euler(0f, TB2SpawnYaw, 0f)
             );
 
             // 4. TB1에 FPV 콕핏 앵커 및 전면 윈드실드 HUD 스크린 부착
@@ -204,6 +170,7 @@ namespace PhysicalAI.EditorTools
             switcher.wsManager = ws;
             switcher.agentManager = multiManager;
             switcher.godViewAnchor = godViewAnchor.transform;
+            switcher.godViewOrthoSize = GodViewOrthoSize;
             switcher.defaultRobotId = "tb1";
             switcher.robotCockpits = new[]
             {
@@ -247,6 +214,7 @@ namespace PhysicalAI.EditorTools
             dual.xrCamera = mainCam;
             dual.desktopMapCamera = mapCam;
             dual.mapAnchor = godViewAnchor.transform;
+            dual.mapOrthoSize = GodViewOrthoSize;
             dual.picker = picker;
             dual.perspectiveSwitcher = switcher;
 
@@ -255,6 +223,16 @@ namespace PhysicalAI.EditorTools
             fpv.dualDisplay = dual;
 
             Debug.Log("[PhysicalAI] Dual TurtleBot3 Burger Scene Generation Completed Successfully!");
+        }
+
+        private static void CreateWall(GameObject parent, string wallName, Vector3 position, Vector3 scale, Material mat)
+        {
+            GameObject wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            wall.name = wallName;
+            wall.transform.SetParent(parent.transform);
+            wall.transform.position = position;
+            wall.transform.localScale = scale;
+            wall.GetComponent<Renderer>().material = mat;
         }
 
         private static GameObject CreateCockpitAnchor(GameObject robot, string anchorName)
