@@ -151,8 +151,6 @@ namespace PhysicalAI.VR
             //    우측 스틱 상하 = 직진·후진
             ControllerFor(steerStickHand).TryGetFeatureValue(CommonUsages.primary2DAxis, out Vector2 steerStick);
             ControllerFor(driveStickHand).TryGetFeatureValue(CommonUsages.primary2DAxis, out Vector2 driveStick);
-            _rawSteer = steerStick;
-            _rawDrive = driveStick;
             float turn = Mathf.Abs(steerStick.x) >= deadZone ? Mathf.Clamp(steerStick.x, -1f, 1f) : 0f;
             float forward = Mathf.Abs(driveStick.y) >= deadZone ? Mathf.Clamp(driveStick.y, -1f, 1f) : 0f;
             if (turn == 0f && forward == 0f) return Vector2.zero;
@@ -191,30 +189,6 @@ namespace PhysicalAI.VR
             var side = hand == XRNode.LeftHand ? InputDeviceCharacteristics.Left : InputDeviceCharacteristics.Right;
             InputDevices.GetDevicesWithCharacteristics(InputDeviceCharacteristics.Controller | side, _devBuf);
             return _devBuf.Count > 0 ? _devBuf[0] : d;
-        }
-
-        // ===================== 입력 진단 HUD (F1) =====================
-
-        [Header("입력 진단")]
-        [Tooltip("PC 화면 좌상단에 컨트롤러 원시 입력·송신 명령 표시. F1로 켜고 끔")]
-        public bool showInputDebug = true;
-        public KeyCode inputDebugKey = KeyCode.F1;
-        private Vector2 _rawSteer, _rawDrive, _lastCmd;
-        private GUIStyle _debugStyle;
-
-        private void OnGUI()
-        {
-            if (Event.current.type == EventType.KeyDown && Event.current.keyCode == inputDebugKey) showInputDebug = !showInputDebug;
-            if (!showInputDebug) return;
-            if (_debugStyle == null) _debugStyle = new GUIStyle(GUI.skin.box) { alignment = TextAnchor.UpperLeft, fontSize = 13 };
-            InputDevice l = ControllerFor(steerStickHand), r = ControllerFor(driveStickHand);
-            string text =
-                $"[INPUT F1]  robot={currentControlledRobot}\n" +
-                $"L({steerStickHand}) {(l.isValid ? l.name : "NOT FOUND")}  stick=({_rawSteer.x:+0.00;-0.00},{_rawSteer.y:+0.00;-0.00})\n" +
-                $"R({driveStickHand}) {(r.isValid ? r.name : "NOT FOUND")}  stick=({_rawDrive.x:+0.00;-0.00},{_rawDrive.y:+0.00;-0.00})\n" +
-                $"grip={(DeadmanHeld ? "HELD" : "-")}  blocked={(DriveBlockedByDeadman ? "NO GRIP" : "-")}  deadZone={deadZone:0.00}\n" +
-                $"send: forward={_lastCmd.y:+0.00;-0.00}  turn={_lastCmd.x:+0.00;-0.00}";
-            GUI.Box(new Rect(10, 10, 520, 96), text, _debugStyle);
         }
 
         private bool GetEmergencyStopInput()
@@ -335,7 +309,6 @@ namespace PhysicalAI.VR
             float forward = dir.y;
             float turn = dir.x;
             LastForwardCommand = forward;
-            _lastCmd = dir;
 
             float left = forward + turn;
             float right = forward - turn;

@@ -18,6 +18,19 @@ namespace PhysicalAI.VR
         public float margin = 20f;
         public Vector2 referenceResolution = new Vector2(1920, 1080);
 
+        [Header("크기·위치 (제목줄 드래그로 이동, 위치·크기는 PlayerPrefs에 저장)")]
+        [Tooltip("기준 스케일 배율. -/= 키로 실행 중 조절")]
+        [Range(0.4f, 1.5f)] public float hudScale = 0.75f;
+        public float hudScaleStep = 0.05f;
+        public KeyCode scaleDownKey = KeyCode.Minus;
+        public KeyCode scaleUpKey = KeyCode.Equals;
+        [Tooltip("위치·크기 초기화 (우측 상단)")]
+        public KeyCode resetLayoutKey = KeyCode.Home;
+        private const float MinHudScale = 0.4f, MaxHudScale = 1.5f;
+        private const float TitleBarH = 34f;
+        private const float FooterH = 20f;
+        private const string PrefX = "PhysicalAI.HUD.x", PrefY = "PhysicalAI.HUD.y", PrefScale = "PhysicalAI.HUD.scale";
+
         [Header("표시")]
         public bool visible = true;
         public KeyCode toggleKey = KeyCode.F1;
@@ -52,10 +65,66 @@ namespace PhysicalAI.VR
             if (_texWhite != null) Destroy(_texWhite);
         }
 
+        // 패널 좌상단 (가상 좌표). NaN = 우측 상단 기본 위치
+        private Vector2 _pos = new Vector2(float.NaN, float.NaN);
+        private bool _dragging;
+
+        private void Start()
+        {
+            hudScale = PlayerPrefs.GetFloat(PrefScale, hudScale);
+            if (PlayerPrefs.HasKey(PrefX)) _pos = new Vector2(PlayerPrefs.GetFloat(PrefX), PlayerPrefs.GetFloat(PrefY));
+        }
+
         private void Update()
         {
             if (Input.GetKeyDown(toggleKey)) visible = !visible;
+            if (Input.GetKeyDown(scaleDownKey)) SetScale(hudScale - hudScaleStep);
+            if (Input.GetKeyDown(scaleUpKey)) SetScale(hudScale + hudScaleStep);
+            if (Input.GetKeyDown(resetLayoutKey))
+            {
+                _pos = new Vector2(float.NaN, float.NaN);
+                PlayerPrefs.DeleteKey(PrefX);
+                PlayerPrefs.DeleteKey(PrefY);
+                SetScale(0.75f);
+            }
         }
+
+        private void SetScale(float s)
+        {
+            hudScale = Mathf.Clamp(s, MinHudScale, MaxHudScale);
+            PlayerPrefs.SetFloat(PrefScale, hudScale);
+        }
+
+        /// <summary>제목줄 드래그로 이동. 패널이 화면 밖으로 나가지 않게 매 프레임 제한.</summary>
+        private void HandleDragAndClamp(float virtW, float virtH, float panelH)
+        {
+            if (float.IsNaN(_pos.x)) _pos = new Vector2(virtW - panelWidth - margin, margin);
+            Event e = Event.current;
+            Rect title = new Rect(_pos.x, _pos.y, panelWidth, TitleBarH);
+            if (e.type == EventType.MouseDown && e.button == 0 && title.Contains(e.mousePosition)) { _dragging = true; e.Use(); }
+            else if (e.type == EventType.MouseDrag && _dragging) { _pos += e.delta; e.Use(); }
+            else if (e.type == EventType.MouseUp && _dragging)
+            {
+                _dragging = false;
+                PlayerPrefs.SetFloat(PrefX, _pos.x);
+                PlayerPrefs.SetFloat(PrefY, _pos.y);
+                e.Use();
+            }
+            _pos.x = Mathf.Clamp(_pos.x, 0f, Mathf.Max(0f, virtW - panelWidth));
+            _pos.y = Mathf.Clamp(_pos.y, 0f, Mathf.Max(0f, virtH - panelH - FooterH));   // 아래 안내 문구까지 화면 안
+        }
+
+        /// <summary>마우스가 HUD 위에 있는지 (휠 줌·로봇 클릭과 겹침 방지, 화면 좌표 y 하단 기준).</summary>
+        public bool ContainsScreenPoint(Vector2 mouse)
+        {
+            if (!visible || float.IsNaN(_pos.x)) return false;
+            float scale = Screen.height / referenceResolution.y * hudScale;
+            Vector2 gui = new Vector2(mouse.x, Screen.height - mouse.y) / scale;
+            return new Rect(_pos.x, _pos.y, panelWidth, PanelHeight).Contains(gui);
+        }
+
+        private const float CardH = 140f;
+        private static float PanelHeight => 96f + LineH + CardH * 2f + 16f;
 
         private void BuildStyles()
         {
@@ -75,16 +144,18 @@ namespace PhysicalAI.VR
             if (!visible) return;
             if (!_stylesReady) BuildStyles();
 
-            // 해상도 독립 스케일 (높이 기준)
-            float scale = Screen.height / referenceResolution.y;
+            // 해상도 독립 스케일 (높이 기준) × 사용자 배율
+            float scale = Screen.height / referenceResolution.y * hudScale;
             Matrix4x4 prev = GUI.matrix;
             GUI.matrix = Matrix4x4.TRS(Vector3.zero, Quaternion.identity, new Vector3(scale, scale, 1f));
             float virtW = Screen.width / scale;
+            float virtH = Screen.height / scale;
 
-            float x = virtW - panelWidth - margin;
-            float y = margin;
-            float cardH = 140f;
-            float panelH = 96f + LineH + cardH * 2f + 16f;
+            float cardH = CardH;
+            float panelH = PanelHeight;
+            HandleDragAndClamp(virtW, virtH, panelH);
+            float x = _pos.x;
+            float y = _pos.y;
 
             bool blinkOn = Mathf.FloorToInt(Time.unscaledTime / Mathf.Max(0.02f, blinkPeriod * 0.5f)) % 2 == 0;
 
@@ -155,7 +226,7 @@ namespace PhysicalAI.VR
             cy += cardH;
             DrawRobotCard(new Rect(cx, cy, cw, cardH - 8f), "tb2", "TB2  ·  AGV", tb2Color, blinkOn);
 
-            GUI.Label(new Rect(x, y + panelH + 2f, panelWidth - 6f, 18f), $"[{toggleKey}] toggle HUD",
+            GUI.Label(new Rect(x, y + panelH + 2f, panelWidth - 6f, 18f), $"drag title · [-][=] size · [{resetLayoutKey}] reset · [{toggleKey}] hide",
                       new GUIStyle(_small) { alignment = TextAnchor.UpperRight });
 
             GUI.matrix = prev;

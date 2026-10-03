@@ -31,6 +31,21 @@ namespace PhysicalAI.VR
 
         public bool IsDualDisplayActive { get; private set; }
 
+        [Header("PC 관제 맵 줌·이동 (God-View 직교 카메라)")]
+        [Tooltip("휠 한 칸당 확대·축소 비율")]
+        public float zoomStep = 0.12f;
+        public float minOrthoSize = 0.3f;
+        public float maxOrthoSize = 6f;
+        [Tooltip("이 버튼 드래그로 맵 이동 (1 = 우클릭)")]
+        public int panMouseButton = 1;
+        [Tooltip("휠 클릭: 줌·이동 초기화")]
+        public int resetMouseButton = 2;
+        public GodViewSidebarHUD sidebar;
+
+        private float _defaultMapOrtho, _defaultGodOrtho;
+        private Vector3 _panOffset;
+        private Vector3 _lastMouse;
+
         [Header("PC ↔ VR 전환 상태 배너")]
         [Tooltip("PC 화면 상단에 헤드셋 연결·착용 상태 표시 (관제사가 착용자 준비 여부 확인)")]
         public bool showVrStatusBanner = true;
@@ -100,7 +115,52 @@ namespace PhysicalAI.VR
                 desktopMapCamera.orthographicSize = mapOrthoSize;
                 desktopMapCamera.enabled = false;
             }
+            if (sidebar == null) sidebar = FindFirstObjectByType<GodViewSidebarHUD>();
+            _defaultMapOrtho = mapOrthoSize;
+            _defaultGodOrtho = perspectiveSwitcher != null ? perspectiveSwitcher.godViewOrthoSize : mapOrthoSize;
             Apply(XRSettings.isDeviceActive);
+        }
+
+        /// <summary>PC 화면에 보이는 직교 관제 카메라 (XR: 맵 카메라, PC 단독: God-View 메인 카메라). 콕핏이면 null.</summary>
+        private Camera PcMapCamera()
+        {
+            if (IsDualDisplayActive) return desktopMapCamera;
+            bool godView = perspectiveSwitcher != null && perspectiveSwitcher.CurrentView == ViewPerspective.MacroGodView
+                           && !perspectiveSwitcher.IsTransitioning;
+            return godView && xrCamera != null && xrCamera.orthographic ? xrCamera : null;
+        }
+
+        /// <summary>휠 = 확대·축소, 우클릭 드래그 = 이동, 휠 클릭 = 초기화. HUD 위에서는 무시.</summary>
+        private void HandleZoomPan(Camera cam)
+        {
+            Vector3 mouse = Input.mousePosition;
+            bool overHud = sidebar != null && sidebar.ContainsScreenPoint(mouse);
+            if (Input.GetMouseButtonDown(resetMouseButton) && !overHud)
+            {
+                _panOffset = Vector3.zero;
+                SetOrtho(cam, IsDualDisplayActive ? _defaultMapOrtho : _defaultGodOrtho);
+            }
+            float scroll = Input.mouseScrollDelta.y;
+            if (Mathf.Abs(scroll) > 0.01f && !overHud)
+                SetOrtho(cam, cam.orthographicSize * Mathf.Pow(1f - zoomStep, scroll));   // 위로 = 확대
+            if (Input.GetMouseButtonDown(panMouseButton)) _lastMouse = mouse;
+            if (Input.GetMouseButton(panMouseButton))
+            {
+                // 수직 탑다운: 화면 오른쪽 = +X, 위쪽 = +Z. 픽셀 → 월드 = 2·orthoSize / 화면 높이
+                float worldPerPixel = 2f * cam.orthographicSize / Mathf.Max(1, cam.pixelHeight);
+                Vector3 d = mouse - _lastMouse;
+                _panOffset -= new Vector3(d.x, 0f, d.y) * worldPerPixel;
+                _lastMouse = mouse;
+            }
+        }
+
+        private void SetOrtho(Camera cam, float size)
+        {
+            size = Mathf.Clamp(size, minOrthoSize, maxOrthoSize);
+            cam.orthographicSize = size;
+            // 콕핏 왕복·XR 전환 후에도 유지되도록 원본 값도 갱신
+            if (IsDualDisplayActive) mapOrthoSize = size;
+            else if (perspectiveSwitcher != null) perspectiveSwitcher.godViewOrthoSize = size;
         }
 
         private void LateUpdate()
@@ -108,9 +168,17 @@ namespace PhysicalAI.VR
             bool xrActive = XRSettings.isDeviceActive;
             if (_lastXrActive != xrActive) Apply(xrActive);
 
-            if (IsDualDisplayActive && mapAnchor != null)
+            Camera cam = PcMapCamera();
+            if (cam != null) HandleZoomPan(cam);
+
+            if (mapAnchor == null) return;
+            if (IsDualDisplayActive)
             {
-                desktopMapCamera.transform.SetPositionAndRotation(mapAnchor.position, mapAnchor.rotation);
+                desktopMapCamera.transform.SetPositionAndRotation(mapAnchor.position + _panOffset, mapAnchor.rotation);
+            }
+            else if (cam != null)
+            {
+                cam.transform.position = mapAnchor.position + _panOffset;   // PC 단독 God-View (HMD 없음)
             }
         }
 

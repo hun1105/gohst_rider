@@ -48,6 +48,7 @@ namespace PhysicalAI.VR
         public Vector2 labelOffset = new Vector2(18f, 6f);
         public Vector2 labelSize = new Vector2(260f, 26f);
         public int labelFontSize = 14;
+        private const float LabelPadding = 16f;
 
         public string HoveredRobotId => _hovered != null ? _hovered.robotId : null;
 
@@ -182,13 +183,16 @@ namespace PhysicalAI.VR
 
             if (_labelStyle == null)
             {
-                _labelStyle = new GUIStyle(GUI.skin.box) { fontSize = labelFontSize, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleLeft };
+                _labelStyle = new GUIStyle(GUI.skin.box) { fontSize = labelFontSize, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
                 _labelStyle.normal.textColor = highlightColor;
             }
 
+            // 이름만 표시 (상자 크기 = 글자 크기에 맞춤)
+            var text = new GUIContent(_hovered.robotId.ToUpperInvariant());
+            Vector2 size = _labelStyle.CalcSize(text);
             Vector3 m = Input.mousePosition;
-            Rect r = new Rect(m.x + labelOffset.x, Screen.height - m.y + labelOffset.y, labelSize.x, labelSize.y);
-            GUI.Box(r, $" {_hovered.robotId.ToUpperInvariant()}  |  CLICK: ENTER FPV COCKPIT", _labelStyle);
+            Rect r = new Rect(m.x + labelOffset.x, Screen.height - m.y + labelOffset.y, size.x + LabelPadding, Mathf.Max(size.y, labelSize.y));
+            GUI.Box(r, text, _labelStyle);
         }
 
         private void OnDisable()
