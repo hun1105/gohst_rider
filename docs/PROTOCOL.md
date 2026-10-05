@@ -59,10 +59,10 @@
 | mode | string | - | 이 로봇 주행 모드 `MANUAL` / `AUTO` (T-025) |
 | auto_state | string | - | 이 로봇 AUTO 세부 상태 (`OFF`/`CRUISE`/`AVOID`/`RETURN`/`STUCK`) (T-025) |
 | alert | bool | - | 이 로봇 정지·알림 상태 (인터록 또는 AUTO STUCK) (T-025) |
-| stop_reason | string | - | 정지 원인 문구 (예: `COLLISION RISK: TB1 AGV (0.80m)`, `AUTO STUCK: …`). 정상 `""` (T-025) |
+| stop_reason | string | - | 정지 원인 문구 (예: `COLLISION RISK: TB1 AGV (0.50m)`, `AUTO STUCK: …`). 정상 `""` (T-025) |
 
 - `real` 좌표 변환: ROS odom(x 전방, y 좌측, yaw 반시계) → Unity(`z` = 전방, `x` = 우측, `yaw` 시계방향 도). 로봇별 스폰 포즈(시뮬레이션 초기 위치)를 원점 오프셋으로 적용.
-- 스폰 포즈 (T-029, 실측 통로 0.445 × 2.317 m 1:1): `tb1` (x 0, z −0.75, 0°), `tb2` (x 0, z +0.75, 180°) — 통로 중앙선 1.50m 대향. Unity `SceneSetupAutomation` 스폰과 동일.
+- 스폰 포즈 (T-029, 실측 통로 0.445 × 2.317 m 1:1): `tb1` (x 0, z −0.5484, 0°), `tb2` (x 0, z +0.5484, 180°) — 중심 1.097m 대향 (T-033 실측: 범퍼 간 S20 FE 세로 6개 + Burger 전장). Unity `SceneSetupAutomation` 스폰과 동일.
 - `linear_vel`/`angular_vel`은 안전 게이트 통과 후 **지령값** (측정값 아님).
 
 ### 안전 상태 객체 (`safety`)
@@ -93,20 +93,21 @@
 - 실기 `tb2` 개루프 순찰은 기본 비활성 (CLI `--real-patrol`로 허용). 실기 자율 주행은 AUTO 사용.
 
 ### 자율 배회 AUTO 규칙 (T-016 → T-025 로봇별)
+- **기본 = 직진 전용 (T-036)**: `CRUISE` 0.10 m/s 직진만, 회피 조향(`AVOID`)·구역 복귀(`RETURN`) 없음. 정지는 조작자 또는 아래 `STUCK` 조건(전방 0.35m·로봇 간 만남·스캔 끊김). 릴레이 CLI `--auto-steer`로 회피·복귀 사용.
 - 대상: 실기(`source=real`, `online`, LiDAR 수신) `tb1`·`tb2` 각각. 조건 미충족 시 해당 로봇 `AUTO` 요청 무시. 로봇마다 상태·배회 중심 따로.
 - 조종 권한(`controlled_robot`)과 무관하게 AUTO 로봇은 계속 배회. 권한 없는 MANUAL 실기 로봇은 정지 유지.
 - 배회 구역: 첫 AUTO 진입 시 오도메트리 위치 중심 반경 0.6m (T-029 실측 통로). 이탈 시 `RETURN`(중심 방향 조향), 반경 70% 안으로 들어오면 `CRUISE`. 클라이언트 연결 해제 시 중심 초기화.
 - `CRUISE`: 0.10 m/s 직진. 전방 0.6m 이내 장애물 → `AVOID`: LiDAR 추천 탈출 방향으로 조향 (오차 20° 이내 0.05 m/s 전진, 초과 시 제자리 회전, 최대 0.8 rad/s).
-- `STUCK` 전환: 인터록(전방 0.35m, **로봇 간 1.0m 만남**, 카메라 로봇 YOLO) / 추천 경로 없음(막다른 길) / `AVOID` 6초 지속. 즉시 정지, `safety.reason`에 원인, 영상 배너·추천 경로 표시. **자동 재개 없음.**
+- `STUCK` 전환: 인터록(전방 0.35m, **로봇 간 0.3m 만남**, 카메라 로봇 YOLO) / 추천 경로 없음(막다른 길) / `AVOID` 6초 지속. 즉시 정지, `safety.reason`에 원인, 영상 배너·추천 경로 표시. **자동 재개 없음.**
 - 조작자 개입: 그 로봇 대상 0이 아닌 `TWIST`/`DRIVE`, `STOP`, **`TELEPORT` FPV(콕핏 진입)** → 그 로봇만 즉시 `MANUAL`. `AUTO` 재요청(Unity `R` / 퀘스트 Y) → `CRUISE` 재개 (막혀 있으면 곧바로 `STUCK`).
 - AUTO 중 워치독 미적용 (조작자 무입력이 정상). 클라이언트 연결 해제 → 모든 AUTO 해제·정지. `SELECT_ROBOT`은 AUTO를 해제하지 않음.
-- 로봇 간 만남(거리 < 1.0m): 두 로봇 모두 정지, AUTO 로봇은 `STUCK`, 양쪽 `alert`. 두 로봇 모두 전진 차단, 후진·회전으로 비켜주기만 허용. 거리 확보 후에도 자동 재개 없음 (`AUTO` 재요청). 실기 속도 상한·LiDAR 가드·offline 정지는 그대로 적용.
+- 로봇 간 만남(거리 < 0.3m): 두 로봇 모두 정지, AUTO 로봇은 `STUCK`, 양쪽 `alert`. 두 로봇 모두 전진 차단, 후진·회전으로 비켜주기만 허용. 거리 확보 후에도 자동 재개 없음 (`AUTO` 재요청). 실기 속도 상한·LiDAR 가드·offline 정지는 그대로 적용.
 
 ### 조종 권한 규칙 (T-007)
 - 텔레옵 권한은 항상 1대 (`controlled_robot`). 기본 `tb1`.
 - `TWIST.robot` ≠ `controlled_robot` → 무시 (전환 직후 잔여 명령 차단). `DRIVE`는 `tb1` 대상으로 간주.
 - 워치독(0.5s)은 `controlled_robot`에 적용.
-- `tb2` 선택 시: 자율 순찰 정지, 수동 조작. 로봇 간 거리 < 1.0m이면 두 로봇 전진 차단. YOLO 인터록은 `camera_robot` 대상.
+- `tb2` 선택 시: 자율 순찰 정지, 수동 조작. 로봇 간 거리 < 0.3m이면 두 로봇 전진 차단. YOLO 인터록은 `camera_robot` 대상.
 - 권한 이양 시: 이전 로봇이 MANUAL이면 즉시 정지 (AUTO면 계속 배회). 새 로봇이 MANUAL이면 정지 상태에서 시작.
 - 클라이언트 연결 해제 → 양쪽 정지, 권한 `tb1` 복귀, `tb2` 자율 순찰 재개.
 
@@ -146,14 +147,16 @@
 - Unity는 `telemetry.controlled_robot` 불일치 시 `SELECT_ROBOT` 재전송 (재연결 대비).
 
 ### 6. 자율 배회 (`AUTO`) — T-016
-- 형식: `{"cmd":"AUTO","robot":"tb1"|"tb2","enable":true|false}` (T-025: `tb2` 허용)
+- 형식: `{"cmd":"AUTO","robot":"tb1"|"tb2"|"all","enable":true|false}` (T-025: `tb2` 허용, T-031: `all` = 실기 로봇 전부)
+- `all`: 로봇별로 진입 조건을 따로 검사 (조건 미충족 로봇만 거부). Unity `R`/퀘스트 Y = `all`, `Shift+R` = 조종 중인 로봇만.
+- `reset_pose: true` (선택, T-035): 그 로봇의 **이번 연결 첫 AUTO**(배회 중심 미설정)일 때만 시작 전에 `RESET_POSE`(스폰 포즈)를 수행. STUCK 후 재개 등 두 번째부터는 위치 유지. Unity `R`/Y가 보냄.
 - `enable=true`: AUTO 진입/재개, `false`: MANUAL 전환·정지. 규칙은 "자율 배회 AUTO 규칙" 참조.
 
 ### 7. 위치 원점 재설정 (`RESET_POSE`) — T-019
-- 형식: `{"cmd":"RESET_POSE","robot":"tb1"}` 또는 `{"cmd":"RESET_POSE","robot":"tb1","x":0.0,"z":0.0,"yaw":0.0}`
+- 형식: `{"cmd":"RESET_POSE","robot":"tb1"|"tb2"|"all"}` 또는 `{"cmd":"RESET_POSE","robot":"tb1","x":0.0,"z":0.0,"yaw":0.0}` (`all` = 실기 전부 스폰 포즈, T-035, Unity `Shift+P`)
 - 로봇을 현장 원점 마커에 놓고 송신 → 현재 odom을 원점으로 기록, 이후 Unity 포즈 = 기준 포즈 + (현재 odom − 기록 원점).
 - 기준 포즈: `x`·`z`(m)·`yaw`(deg, Unity 기준) 주면 그 값, 생략 시 해당 로봇 스폰 포즈.
-- 실기(`source=real`) 로봇만 적용. bringup 재시작 없이 맞춤. AUTO 배회 구역 중심은 영향 없음(odom 상대 거리 기준).
+- 실기(`source=real`) 로봇만 적용. bringup 재시작 없이 맞춤. 재설정 시 그 로봇의 AUTO 배회 중심도 초기화 (다음 AUTO 시작 위치가 새 중심, T-035).
 
 ---
 
@@ -172,3 +175,8 @@
 | 2026-10-02 | LiDAR 유효 최소 거리 하한 0.12m (ROS 1 LD08 무효값 0.0 오판 방지) (T-026) | claude |
 | 2026-10-03 | 스폰 포즈 실측 통로 1:1 (tb1 z −0.75 / tb2 z +0.75 대향) (T-029) | claude |
 | 2026-10-03 | AUTO 배회 반경 1.5 → 0.6m (실측 통로) (T-029) | claude |
+| 2026-10-03 | `AUTO.robot` = `all` 추가 (두 대 동시 시작) (T-031) | claude |
+| 2026-10-03 | 로봇 간 만남 기준 1.0 → 0.6m, 스폰 중심 간격 1.50 → 1.097m (TB1 실측 보정) (T-033) | claude |
+| 2026-10-03 | 로봇 간 만남 기준 0.6 → 0.3m (중심 간) (T-034) | claude |
+| 2026-10-03 | `AUTO.reset_pose`(첫 AUTO 시 스폰 재설정), `RESET_POSE.robot` = `all`, 재설정 시 배회 중심 초기화 (T-035) | claude |
+| 2026-10-03 | AUTO 기본 직진 전용 (회피·복귀는 `--auto-steer`) (T-036) | claude |

@@ -14,17 +14,13 @@ namespace PhysicalAI.EditorTools
         private const float PickColliderWidth = 0.6f;
         private const float PickColliderHeight = 0.4f;
 
-        // T-029 실측 1:1 초협소 통로 테스트베드
-        //   세로(Z) = Galaxy S20 FE 159.8mm × 14.5 = 2.317m, 가로(X) = Burger 전폭 178mm × 2.5 = 0.445m
-        private const float CorridorWidth = 0.445f;
-        private const float CorridorLength = 2.317f;
+        // T-031: 벽 없는 넓은 바닥 (실물 장애물은 LiDAR 점으로 표시)
+        private const float FloorSize = 10f;
         private const float FloorThickness = 0.1f;
-        private const float WallHeight = 0.5f;
-        private const float WallThickness = 0.05f;
 
-        // 스폰: 통로 중앙선, 1.50m 간격 대향 (릴레이 SPAWN_POSES와 동일해야 함)
-        private static readonly Vector3 TB1SpawnPosition = new Vector3(0f, 0f, -0.75f);
-        private static readonly Vector3 TB2SpawnPosition = new Vector3(0f, 0f, 0.75f);
+        // 스폰: 실측 중심 간격 1.097m 대향 (범퍼 간 S20 FE 세로 6개) (릴레이 SPAWN_POSES와 동일해야 함)
+        private static readonly Vector3 TB1SpawnPosition = new Vector3(0f, 0f, -0.5484f);
+        private static readonly Vector3 TB2SpawnPosition = new Vector3(0f, 0f, 0.5484f);
         private const float TB2SpawnYaw = 180f;
 
         // God-View: 통로 중앙 3.5m 상공 수직 탑다운 (화면 위쪽 = +Z). 직교 반높이 1.45m → 2.32m 통로 전체 + 여백
@@ -74,24 +70,15 @@ namespace PhysicalAI.EditorTools
             GameObject oldRacks = GameObject.Find("Warehouse_Environment");
             if (oldRacks != null) Object.DestroyImmediate(oldRacks);
 
-            // 1. 바닥: 실측 통로 1:1 (두께 0.1m 큐브, 윗면 = y 0)
+            // 1. 바닥: 벽 없는 넓은 바닥 (두께 0.1m 큐브, 윗면 = y 0)
             GameObject floor = GameObject.CreatePrimitive(PrimitiveType.Cube);
             floor.name = "Warehouse_Floor";
             floor.transform.position = new Vector3(0f, -FloorThickness * 0.5f, 0f);
-            floor.transform.localScale = new Vector3(CorridorWidth, FloorThickness, CorridorLength);
+            floor.transform.localScale = new Vector3(FloorSize, FloorThickness, FloorSize);
             Material floorMat = new Material(Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard"));
             floorMat.color = new Color(0.2f, 0.22f, 0.25f);
             floor.GetComponent<Renderer>().material = floorMat;
 
-            // 2. 통로 벽 4면 (선반 랙·작업자 더미 제거). 벽 중심선 = 바닥 가장자리
-            GameObject env = new GameObject("Warehouse_Environment");
-            Material wallMat = new Material(Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard"));
-            wallMat.color = new Color(0.55f, 0.58f, 0.62f);
-            float halfW = CorridorWidth * 0.5f, halfL = CorridorLength * 0.5f, wallY = WallHeight * 0.5f;
-            CreateWall(env, "Wall_L", new Vector3(-halfW, wallY, 0f), new Vector3(WallThickness, WallHeight, CorridorLength), wallMat);
-            CreateWall(env, "Wall_R", new Vector3(halfW, wallY, 0f), new Vector3(WallThickness, WallHeight, CorridorLength), wallMat);
-            CreateWall(env, "Wall_Back", new Vector3(0f, wallY, -halfL), new Vector3(CorridorWidth, WallHeight, WallThickness), wallMat);
-            CreateWall(env, "Wall_Front", new Vector3(0f, wallY, halfL), new Vector3(CorridorWidth, WallHeight, WallThickness), wallMat);
 
             // 3. TurtleBot3 Burger 2대 생성
             // TB1: 주행 AGV (Cyan 포인트)
@@ -210,6 +197,9 @@ namespace PhysicalAI.EditorTools
             PathRibbonVisualizer ribbons = manager.AddComponent<PathRibbonVisualizer>();
             ribbons.agentManager = multiManager;
 
+            RobotVisibilityToggle visibility = manager.AddComponent<RobotVisibilityToggle>();
+            visibility.agentManager = multiManager;
+
             DualDisplayController dual = manager.AddComponent<DualDisplayController>();
             dual.xrCamera = mainCam;
             dual.desktopMapCamera = mapCam;
@@ -223,16 +213,6 @@ namespace PhysicalAI.EditorTools
             fpv.dualDisplay = dual;
 
             Debug.Log("[PhysicalAI] Dual TurtleBot3 Burger Scene Generation Completed Successfully!");
-        }
-
-        private static void CreateWall(GameObject parent, string wallName, Vector3 position, Vector3 scale, Material mat)
-        {
-            GameObject wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            wall.name = wallName;
-            wall.transform.SetParent(parent.transform);
-            wall.transform.position = position;
-            wall.transform.localScale = scale;
-            wall.GetComponent<Renderer>().material = mat;
         }
 
         private static GameObject CreateCockpitAnchor(GameObject robot, string anchorName)

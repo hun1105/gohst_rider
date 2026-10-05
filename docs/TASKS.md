@@ -35,3 +35,10 @@
 | T-028 | 릴레이 스트레스 10회(730/730)·300초 부하 시험(soak_test.py), 제어 루프 고정 주기 15.8→20 Hz, JPEG 인코딩 스레드화, 패키징 사전 검증 | claude | review | agent/claude | docs/NIGHTLY_RESULT_20261003.md |
 | T-029 | Unity 맵 실측 1:1 초협소 통로(0.712×2.317 m, 벽 4면, 랙·작업자 제거), 스폰 1.50m 대향(Unity·릴레이 동일), God-View 3.5m·직교 1.45, 가상 tb2 순찰 통로 내 축소 | claude | review | agent/claude | docs/PROTOCOL.md |
 | T-030 | 통로 가로 0.712 → 0.445m (Burger 전폭 × 2.5), 단일 차선 | claude | review | agent/claude | - |
+| T-031 | AUTO all(R/Y = 두 대 동시, Shift+R = 선택 로봇), Unity 맵 벽 제거·10m 바닥 | claude | review | agent/claude | docs/PROTOCOL.md |
+| T-032 | 실측 보정 도구 tools/calibrate_tb.py(저속 수동 주행·odom/LiDAR 기록·배율/오프셋/스폰 간격 계산), 릴레이 ODOM_LINEAR_SCALE | claude | review | agent/claude | - |
+| T-033 | TB1 실측 보정 반영: 만남 기준 0.6m, 스폰 중심 1.097m(범퍼 간 S20 FE 6개), odom 배율 1.0 유지(odom·명령·LiDAR 일치) | claude | review | agent/claude | ai_relay_server/logs/calib_tb1_* |
+| T-034 | 로봇 간 만남 기준 0.6 → 0.3m (중심 간 ≈ 범퍼 간 0.16m) | claude | review | agent/claude | docs/PROTOCOL.md |
+| T-035 | R 첫 AUTO 시 두 로봇 스폰 위치 자동 재설정(reset_pose), Shift+P 일괄 재설정, 재설정 시 배회 중심 초기화 | claude | review | agent/claude | docs/PROTOCOL.md |
+| T-036 | AUTO 기본 직진 전용(회피 조향·구역 복귀 끔, --auto-steer로 복원), 시험 [9f] | claude | review | agent/claude | docs/PROTOCOL.md |
+| T-037 | 운영규정 v1.0 기준 final/ 산출물: 별지1 15항목 기술설명서(1쪽), 별지4 보고서 보강(표지+5쪽), 콘티 4분할·링크란, 별표6 체크리스트(실제 상태), make_final.py, 패키징 final/ 참조 | claude | review | agent/claude | final/ |

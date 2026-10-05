@@ -40,3 +40,5 @@
 | 2024년 끼임 사고사망 66명 (+22.2%) | 고용노동부 「2024년 재해조사 대상 사망사고 발생현황」 잠정결과 (2025-03-11) |
 | 비계획 정지 비용 (자동차 시간당 최대 230만 달러 등) | Siemens 「The True Cost of Downtime 2024」 |
 | VFH, Follow-the-Gap 알고리즘 | Borenstein & Koren (1991), Sezer & Gokasan (2012) |
+| 사람 개입 간 평균 시간(MTBI) 정의 | AutoInspect, arXiv:2404.12785 (2024) |
+| AGV 인수 시험 가용률 항목 | VDI 2710 Blatt 5 |

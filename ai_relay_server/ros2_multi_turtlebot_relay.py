@@ -51,6 +51,7 @@ AUTO_MAX_TURN = 0.8                   # 조향 각속도 상한 (rad/s)
 AUTO_AVOID_TIMEOUT_S = 6.0            # AVOID 지속 한도 → STUCK (맴돌기 방지)
 AUTO_GEOFENCE_RADIUS_M = 0.6          # 배회 구역 반경 (첫 AUTO 진입 위치 기준, T-029 실측 통로 0.445×2.317m)
 AUTO_GEOFENCE_REENTER_RATIO = 0.7     # 복귀 후 이 비율 안쪽이면 CRUISE (히스테리시스)
+AUTO_ALL = "all"                      # AUTO 명령 대상: 실기 로봇 전부 (T-031)
 AUTO_MANUAL_OVERRIDE_EPS = 0.01       # 이 크기 초과 조작 입력 = 조작자 개입
 
 
@@ -81,7 +82,7 @@ class AutoPilot:
 
 
 # --- 로봇 간 거리 인터록 ---
-AGV_SAFETY_RADIUS_M = 1.0             # tb1↔tb2 최소 안전 거리 (m)
+AGV_SAFETY_RADIUS_M = 0.3             # tb1↔tb2 최소 안전 거리 (중심 간, m ≈ 범퍼 간 0.16m). 정면 대향은 LiDAR 전방 0.35m 가드가 먼저 정지
 
 # --- T-007: 조종 권한 ---
 ROBOT_IDS = ("tb1", "tb2")
@@ -90,9 +91,10 @@ DEFAULT_CONTROLLED_ROBOT = "tb1"
 # --- T-012: 실기체 브리지 (rosbridge) ---
 # 스폰 포즈 (Unity x, z, yaw도). 실기체는 전원 투입 위치 = odom 원점 → 이 포즈에 정렬.
 SPAWN_POSES: Dict[str, Tuple[float, float, float]] = {
-    # T-029 실측 통로(0.445 × 2.317 m) 중앙선 1.50m 대향. Unity SceneSetupAutomation 스폰과 동일해야 함
-    "tb1": (0.0, -0.75, 0.0),
-    "tb2": (0.0, 0.75, 180.0),
+    # T-033 실측: 범퍼 간 Galaxy S20 FE 세로 6개(0.959m) + Burger 전장 0.138m = 중심 1.097m 대향.
+    # Unity SceneSetupAutomation 스폰과 동일해야 함
+    "tb1": (0.0, -0.5484, 0.0),
+    "tb2": (0.0, 0.5484, 180.0),
 }
 ODOM_STALE_S = 0.5                    # odom 무수신 → offline → 지령 0
 SCAN_STALE_S = 1.0                    # scan 무수신 → LiDAR 가드 판단 불가
@@ -110,6 +112,8 @@ SOURCE_REAL = "real"
 # --- T-019: 경로 추천·LiDAR 점 텔레메트리, 위치 원점 재설정 ---
 SCAN_TELEMETRY_MAX_POINTS = 180       # Unity로 보내는 LiDAR 점 상한 (360점 → 2:1 솎음)
 TELEMETRY_LOG_INTERVAL_TICKS = 20     # 운행 이력 JSONL 기록 간격 (20Hz 기준 1초)
+# T-032 실측 보정: odom 이동 거리 × 배율 = 실제 거리. tools/calibrate_tb.py 결과 "odom_scale" 값을 넣는다 (1.0 = 보정 없음)
+ODOM_LINEAR_SCALE: Dict[str, float] = {"tb1": 1.0, "tb2": 1.0}   # 2026-10-03 TB1 측정: odom·명령 적분·LiDAR 감소량 일치 → 1.0 유지
 SIM_PATROL_SPEED = 0.22               # 가상 tb2 순찰 속도 (m/s)
 SIM_PATROL_LEG_S = 2.0                # 직진 구간 (0.44m)
 SIM_PATROL_TURN_S = 2.0               # 180° 회전 시간
@@ -194,11 +198,14 @@ class MultiTurtleBotRelay:
                  camera_open_timeout_ms: int = CAMERA_OPEN_TIMEOUT_MS,
                  camera_model: Optional[CameraModel] = None,
                  camera_grid: bool = False,
-                 camera_robot: str = "tb1"):
+                 camera_robot: str = "tb1",
+                 auto_steer: bool = False):
         self.use_ai = use_ai
         self.camera_url = camera_url
         # T-025: 카메라가 달린 로봇 (영상 위 경로·정지 배너·YOLO 판단 대상)
         self.camera_robot = camera_robot if camera_robot in ROBOT_IDS else "tb1"
+        # T-036: False = AUTO 직진 전용 (회피 조향·구역 복귀 없음, 정지는 조작자·안전 가드)
+        self.auto_steer = auto_steer
         self.vision_hazard = ""   # YOLO 회랑 검출 사유 (카메라 로봇 대상)
         self.camera_open_timeout_ms = camera_open_timeout_ms
         # T-020: 영상 위 경로 투영 (None이면 투영 안 함) + 보정 격자 모드
@@ -494,6 +501,12 @@ class MultiTurtleBotRelay:
             self._auto_stuck("LiDAR scan lost", robot_id)
             return
 
+        if not self.auto_steer:
+            # T-036 직진 전용: 조향 없이 직진. 전방 0.35m·로봇 간 만남은 위 hazard에서 STUCK
+            ap.state = AutoState.CRUISE
+            self._set_vel(robot_id, AUTO_CRUISE_SPEED, 0.0)
+            return
+
         fb = self.links[robot_id].feedback
         cx, cy = ap.center
         dist_from_center = math.hypot(fb.x - cx, fb.y - cy)
@@ -569,6 +582,9 @@ class MultiTurtleBotRelay:
                 ox, oy, oyaw = fb.x, fb.y, fb.yaw
                 if robot_id in self.pose_origin:
                     ox, oy, oyaw = relative_pose(ox, oy, oyaw, self.pose_origin[robot_id])
+                # T-032: 실측 보정 배율 (tools/calibrate_tb.py의 odom_scale). 원점 기준 이동량에만 적용
+                scale = ODOM_LINEAR_SCALE.get(robot_id, 1.0)
+                ox, oy = ox * scale, oy * scale
                 spawn = self.pose_reference.get(robot_id, SPAWN_POSES[robot_id])
                 robot.x, robot.z, robot.yaw = odom_to_unity(ox, oy, oyaw, spawn)
             robot.scan_ok = link.connected and now - fb.scan_stamp < SCAN_STALE_S
@@ -614,6 +630,8 @@ class MultiTurtleBotRelay:
             return
         fb = link.feedback
         self.pose_origin[robot_id] = (fb.x, fb.y, fb.yaw)
+        if robot_id in self.autos and not self.autos[robot_id].active:
+            self.autos[robot_id].center = None   # 새 시작 자리 → 다음 AUTO가 배회 중심 다시 고정
         if x is not None and z is not None:
             self.pose_reference[robot_id] = (float(x), float(z), float(yaw or 0.0) % 360.0)
         else:
@@ -997,12 +1015,19 @@ class MultiTurtleBotRelay:
                         self.select_robot(str(data.get("robot", "")))
 
                     elif cmd == "RESET_POSE":
-                        self.reset_pose(str(data.get("robot", "tb1")), data.get("x"), data.get("z"), data.get("yaw"))
+                        rid = str(data.get("robot", "tb1"))
+                        for target in (ROBOT_IDS if rid == AUTO_ALL else (rid,)):
+                            self.reset_pose(target, data.get("x"), data.get("z"), data.get("yaw"))
 
                     elif cmd == "AUTO":
                         rid = str(data.get("robot", "tb1"))
-                        if rid in ROBOT_IDS:
-                            self.set_auto(bool(data.get("enable", True)), "operator AUTO command", rid)
+                        targets = ROBOT_IDS if rid == AUTO_ALL else ((rid,) if rid in ROBOT_IDS else ())
+                        enable = bool(data.get("enable", True))
+                        for target in targets:   # all: 로봇별로 진입 조건 따로 검사
+                            # T-035: 이번 연결 첫 AUTO면 시작 자리(스폰 포즈) 기준으로 위치 재설정
+                            if enable and data.get("reset_pose") and self.autos[target].center is None:
+                                self.reset_pose(target, None, None, None)
+                            self.set_auto(enable, "operator AUTO command", target)
 
                     elif cmd == "TELEPORT":
                         rid = str(data.get("robot", ""))
@@ -1063,6 +1088,8 @@ if __name__ == "__main__":
     parser.add_argument("--tb2-ros", type=int, choices=(1, 2), default=2, help="tb2 ROS 버전 (Humble=2)")
     parser.add_argument("--tb2-ns", default="", help="tb2 토픽 네임스페이스, 예) tb2")
     parser.add_argument("--camera-url", help="전방 카메라 MJPEG/RTSP URL (없으면 가상 프레임)")
+    parser.add_argument("--auto-steer", action="store_true",
+                        help="AUTO 회피 조향·구역 복귀 사용 (기본: 직진 전용)")
     parser.add_argument("--camera-robot", choices=ROBOT_IDS, default="tb1",
                         help="카메라가 달린 로봇 (영상 위 경로·정지 배너·YOLO 대상)")
     parser.add_argument("--camera-open-timeout-ms", type=int, default=CAMERA_OPEN_TIMEOUT_MS,
@@ -1100,7 +1127,7 @@ if __name__ == "__main__":
         allow_no_scan=args.allow_no_scan, camera_open_timeout_ms=args.camera_open_timeout_ms,
         camera_model=None if args.no_path_overlay else CameraModel(
             mount_height_m=args.camera_height_m, pitch_deg=args.camera_pitch_deg, forward_m=args.camera_forward_m),
-        camera_grid=args.camera_grid, camera_robot=args.camera_robot,
+        camera_grid=args.camera_grid, camera_robot=args.camera_robot, auto_steer=args.auto_steer,
     )
     relay.telemetry_log = telemetry_log
     try:

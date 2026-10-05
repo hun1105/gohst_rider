@@ -40,10 +40,17 @@ namespace PhysicalAI.VR
         public int panMouseButton = 1;
         [Tooltip("휠 클릭: 줌·이동 초기화")]
         public int resetMouseButton = 2;
+        [Tooltip("관제 맵 회전 키 (화면을 왼쪽·오른쪽으로 돌림). 휠 클릭으로 초기화")]
+        public KeyCode rotateLeftKey = KeyCode.Q;
+        public KeyCode rotateRightKey = KeyCode.E;
+        [Tooltip("키 한 번당 회전 각도 (도)")]
+        public float rotateStep = 15f;
         public GodViewSidebarHUD sidebar;
 
-        private float _defaultMapOrtho, _defaultGodOrtho;
+        private float _defaultMapOrtho, _defaultGodOrtho, _defaultFov = -1f;
         private Vector3 _panOffset;
+        private float _mapYaw;   // 관제 맵 회전 (도, 월드 Y축 기준)
+        private const float MinFov = 10f, MaxFov = 100f;   // PC 단독 원근 God-View 확대·축소 범위
         private Vector3 _lastMouse;
 
         [Header("PC ↔ VR 전환 상태 배너")]
@@ -82,10 +89,9 @@ namespace PhysicalAI.VR
             string robot = perspectiveSwitcher != null ? perspectiveSwitcher.SelectedRobotId : "tb1";
             if (!XRSettings.isDeviceActive)
             {
-                text = "VR OFF - Quest Link not active (PC only)";
-                color = new Color(0.25f, 0.28f, 0.32f, 0.9f);
+                return;   // VR 미연결(PC 단독)일 땐 배너 없음 — 관제 화면을 깔끔하게
             }
-            else if (worn == false)
+            if (worn == false)
             {
                 text = cockpit ? $"VR READY - PUT ON HEADSET  >  {robot.ToUpper()} COCKPIT" : "VR READY - headset not worn";
                 color = cockpit ? new Color(0.85f, 0.55f, 0.05f, 0.95f) : new Color(0.25f, 0.28f, 0.32f, 0.9f);
@@ -127,7 +133,7 @@ namespace PhysicalAI.VR
             if (IsDualDisplayActive) return desktopMapCamera;
             bool godView = perspectiveSwitcher != null && perspectiveSwitcher.CurrentView == ViewPerspective.MacroGodView
                            && !perspectiveSwitcher.IsTransitioning;
-            return godView && xrCamera != null && xrCamera.orthographic ? xrCamera : null;
+            return godView && xrCamera != null ? xrCamera : null;   // PC 단독 God-View는 원근일 수 있음
         }
 
         /// <summary>휠 = 확대·축소, 우클릭 드래그 = 이동, 휠 클릭 = 초기화. HUD 위에서는 무시.</summary>
@@ -138,18 +144,29 @@ namespace PhysicalAI.VR
             if (Input.GetMouseButtonDown(resetMouseButton) && !overHud)
             {
                 _panOffset = Vector3.zero;
-                SetOrtho(cam, IsDualDisplayActive ? _defaultMapOrtho : _defaultGodOrtho);
+                _mapYaw = 0f;
+                if (cam.orthographic) SetOrtho(cam, IsDualDisplayActive ? _defaultMapOrtho : _defaultGodOrtho);
+                else if (_defaultFov > 0f) cam.fieldOfView = _defaultFov;
             }
+            if (Input.GetKeyDown(rotateLeftKey)) _mapYaw -= rotateStep;
+            if (Input.GetKeyDown(rotateRightKey)) _mapYaw += rotateStep;
             float scroll = Input.mouseScrollDelta.y;
+            if (!cam.orthographic && _defaultFov < 0f) _defaultFov = cam.fieldOfView;
             if (Mathf.Abs(scroll) > 0.01f && !overHud)
-                SetOrtho(cam, cam.orthographicSize * Mathf.Pow(1f - zoomStep, scroll));   // 위로 = 확대
+            {
+                float k = Mathf.Pow(1f - zoomStep, scroll);   // 위로 = 확대
+                if (cam.orthographic) SetOrtho(cam, cam.orthographicSize * k);
+                else cam.fieldOfView = Mathf.Clamp(cam.fieldOfView * k, MinFov, MaxFov);
+            }
             if (Input.GetMouseButtonDown(panMouseButton)) _lastMouse = mouse;
             if (Input.GetMouseButton(panMouseButton))
             {
-                // 수직 탑다운: 화면 오른쪽 = +X, 위쪽 = +Z. 픽셀 → 월드 = 2·orthoSize / 화면 높이
-                float worldPerPixel = 2f * cam.orthographicSize / Mathf.Max(1, cam.pixelHeight);
+                // 수직 탑다운: 회전 전 화면 오른쪽 = +X, 위쪽 = +Z → 회전만큼 돌려서 적용. 픽셀 → 월드 = 2·orthoSize / 화면 높이
+                float halfHeight = cam.orthographic ? cam.orthographicSize
+                    : Mathf.Max(0.1f, cam.transform.position.y) * Mathf.Tan(cam.fieldOfView * 0.5f * Mathf.Deg2Rad);
+                float worldPerPixel = 2f * halfHeight / Mathf.Max(1, cam.pixelHeight);
                 Vector3 d = mouse - _lastMouse;
-                _panOffset -= new Vector3(d.x, 0f, d.y) * worldPerPixel;
+                _panOffset -= Quaternion.Euler(0f, _mapYaw, 0f) * new Vector3(d.x, 0f, d.y) * worldPerPixel;
                 _lastMouse = mouse;
             }
         }
@@ -172,13 +189,18 @@ namespace PhysicalAI.VR
             if (cam != null) HandleZoomPan(cam);
 
             if (mapAnchor == null) return;
+            Quaternion rot = Quaternion.Euler(0f, _mapYaw, 0f) * mapAnchor.rotation;   // 탑다운 유지, 화면만 회전
             if (IsDualDisplayActive)
             {
-                desktopMapCamera.transform.SetPositionAndRotation(mapAnchor.position + _panOffset, mapAnchor.rotation);
+                desktopMapCamera.transform.SetPositionAndRotation(mapAnchor.position + _panOffset, rot);
             }
             else if (cam != null)
             {
-                cam.transform.position = mapAnchor.position + _panOffset;   // PC 단독 God-View (HMD 없음)
+                // PC 단독 God-View (HMD 없음): 카메라 회전은 트래킹 장치가 매 프레임 덮어쓰므로 부모 리그를 돌린다
+                Transform rig = perspectiveSwitcher != null ? perspectiveSwitcher.vrCameraRig : null;
+                if (rig != null && cam.transform.IsChildOf(rig)) rig.rotation = rot;
+                else cam.transform.rotation = rot;
+                cam.transform.position = mapAnchor.position + _panOffset;
             }
         }
 

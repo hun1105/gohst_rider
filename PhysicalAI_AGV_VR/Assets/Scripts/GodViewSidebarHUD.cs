@@ -32,7 +32,8 @@ namespace PhysicalAI.VR
         private const string PrefX = "PhysicalAI.HUD.x", PrefY = "PhysicalAI.HUD.y", PrefScale = "PhysicalAI.HUD.scale";
 
         [Header("표시")]
-        public bool visible = true;
+        [Tooltip("시작 시 표시 여부 (F1로 켜고 끔). 촬영·시연 화면을 깔끔하게 두려고 기본은 숨김")]
+        public bool visible = false;
         public KeyCode toggleKey = KeyCode.F1;
         [Range(0f, 1f)] public float panelAlpha = 0.72f;
         [Tooltip("이 시간(초) 이상 텔레메트리 미수신 시 STALE 경고")]

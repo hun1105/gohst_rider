@@ -2,7 +2,7 @@
 릴레이 장시간 부하(soak) 시험 — 하드웨어 불필요
 ================================================
 가짜 rosbridge 2대 + in-process 릴레이 + Unity 역할 클라이언트로 아래 순환 시나리오를 반복하며 측정:
-  A 수동 주행(지령→cmd_vel 지연 측정) → B 전방 0.3m 장애물 → C 2대 AUTO + 0.8m 만남 → D 콕핏 진입·후진 비켜주기
+  A 수동 주행(지령→cmd_vel 지연 측정) → B 전방 0.3m 장애물 → C 2대 AUTO + 0.5m 만남 → D 콕핏 진입·후진 비켜주기
 측정: 텔레메트리 주기·드롭, 영상 프레임 수, cmd_vel 송신율(로봇별), 지령→cmd_vel 지연, 프로세스 메모리 추이,
       안전 불변식 위반(장애물·만남 구간 전진 지령 > 0) 횟수.
 실행: python ai_relay_server/soak_test.py [초, 기본 300]
@@ -172,7 +172,7 @@ async def main(duration_s: float):
             check_invariants(time.perf_counter())
             guard["tb1_block_since"] = None
 
-            # ---- C: 2대 AUTO + 0.8m 만남 (6~9s)
+            # ---- C: 2대 AUTO + 0.5m 만남 (6~9s)
             await send({"cmd": "STOP", "robot": "tb1"})
             await send({"cmd": "RESET_POSE", "robot": "tb1", "x": 0.0, "z": 0.0, "yaw": 0.0})
             await send({"cmd": "RESET_POSE", "robot": "tb2", "x": 0.0, "z": 3.0, "yaw": 180.0})
@@ -180,7 +180,7 @@ async def main(duration_s: float):
             for rid in ("tb1", "tb2"):
                 await send({"cmd": "AUTO", "robot": rid, "enable": True})
             await asyncio.sleep(1.0)
-            await send({"cmd": "RESET_POSE", "robot": "tb2", "x": 0.0, "z": 0.8, "yaw": 180.0})
+            await send({"cmd": "RESET_POSE", "robot": "tb2", "x": 0.0, "z": 0.5, "yaw": 180.0})
             guard["meet_since"] = time.perf_counter()
             t_end = time.perf_counter() + 1.5
             while time.perf_counter() < t_end:

@@ -67,6 +67,7 @@ namespace PhysicalAI.VR
         [Header("자율 배회 AUTO (T-016)")]
         [Tooltip("AUTO 시작/재개 키. 퀘스트는 좌측 Y 버튼")]
         public KeyCode autoResumeKey = KeyCode.R;
+        private const string AutoAllRobots = "all";   // PROTOCOL AUTO.robot
 
         [Header("위치 원점 재설정 (T-019)")]
         [Tooltip("로봇을 현장 원점 마커에 놓고 누르면 Unity 포즈를 스폰 포즈로 맞춤 (RESET_POSE)")]
@@ -272,16 +273,23 @@ namespace PhysicalAI.VR
             bool pressed = Input.GetKeyDown(autoResumeKey)
                            | XRButtonDown(XRNode.LeftHand, CommonUsages.secondaryButton, ref _prevAutoButton);  // Y
             if (!pressed || wsManager == null) return;
-            _ = wsManager.SendTextAsync($"{{\"cmd\":\"AUTO\",\"robot\":\"{currentControlledRobot}\",\"enable\":true}}");
-            Debug.Log($"[AGV] AUTO resume requested ({currentControlledRobot})");
+            // T-031: R / 퀘스트 Y = 두 대 모두, Shift+R = 지금 조종 중인 로봇만
+            bool onlySelected = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+            string target = onlySelected ? currentControlledRobot : AutoAllRobots;
+            // reset_pose: 이번 연결 첫 AUTO면 릴레이가 시작 자리(스폰) 기준으로 위치 재설정 (재개 시엔 유지)
+            _ = wsManager.SendTextAsync($"{{\"cmd\":\"AUTO\",\"robot\":\"{target}\",\"enable\":true,\"reset_pose\":true}}");
+            Debug.Log($"[AGV] AUTO resume requested ({target})");
         }
 
         /// <summary>T-019: 현장 원점 마커 정렬. 서버가 현재 odom을 원점으로 기록 (실기 로봇만).</summary>
         private void HandlePoseResetInput()
         {
             if (!Input.GetKeyDown(poseResetKey) || wsManager == null) return;
-            _ = wsManager.SendTextAsync($"{{\"cmd\":\"RESET_POSE\",\"robot\":\"{currentControlledRobot}\"}}");
-            Debug.Log($"[AGV] RESET_POSE requested ({currentControlledRobot}) — 로봇이 원점 마커 위에 있어야 함");
+            // Shift+P = 두 대 모두 시작 자리로, P = 조종 중인 로봇만
+            bool all = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+            string target = all ? AutoAllRobots : currentControlledRobot;
+            _ = wsManager.SendTextAsync($"{{\"cmd\":\"RESET_POSE\",\"robot\":\"{target}\"}}");
+            Debug.Log($"[AGV] RESET_POSE requested ({target}) — 로봇이 시작 자리에 있어야 함");
         }
 
         /// <summary>지정 손 컨트롤러 버튼이 새로 눌린 프레임에 true (에지 검출).</summary>

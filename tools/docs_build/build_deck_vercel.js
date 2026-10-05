@@ -1,7 +1,8 @@
-// PRESENTATION_10SLIDES_VERCEL.pptx — Vercel 스타일 변형 (DESIGN (vercel).md 기준). 내용·대본은 PRESENTATION_10SLIDES.md와 동일.
-// 규칙: 종이색 캔버스 #fafafa, 글자 #171717/#4d4d4d/#666666, 1px 헤어라인 #ebebeb, 반경 6px, 그림자 없음,
-//       강조색은 터미널 그린 #297a3a 하나, 제목 굵기 400대, 라벨은 모노 대문자, ▲ 기호.
-// 폰트: Geist Sans → Pretendard (Inter 계열 한글), Geist Mono → Cascadia Mono. 미설치 PC는 시스템 대체 폰트.
+// PRESENTATION_10SLIDES_VERCEL.pptx — 제출용 발표자료 (별지3, 10장). 대본은 PRESENTATION_10SLIDES.md 슬라이드 노트.
+// 발표 6단 구성: 문제 30초 · Agent 설명 1분 · 구조 1분 · 실제 시연 2분 30초 · 성과 30초 · 발전계획·BM 30초.
+// 디자인: DESIGN (vercel).md — 종이색 #fafafa, 글자 #171717/#4d4d4d/#666666, 1px 헤어라인 #ebebeb, 반경 6px, 그림자 없음,
+//         강조색 터미널 그린 #297a3a 하나, 라벨은 모노 대문자, ▲ 기호.
+// 폰트: Geist Sans → Pretendard, Geist Mono → Cascadia Mono. 미설치 PC는 시스템 대체 폰트.
 const fs = require("fs");
 const path = require("path");
 const pptxgen = require("pptxgenjs");
@@ -18,10 +19,12 @@ const C = {
 const SANS = "Pretendard", MONO = "Cascadia Mono";
 const W = 10, H = 5.625, M = 0.55;
 const R = 0.06;                      // 6px 반경 (인치 환산 근사)
+const TOTAL = 10;
+const GAP = 0.2;
 
 const pres = new pptxgen();
 pres.layout = "LAYOUT_16x9";
-pres.title = "멈추고, 알리고, 사람이 빼낸다 — Vercel style";
+pres.title = "멈추고, 알리고, 사람이 빼낸다";
 
 const notes = {};
 fs.readFileSync(path.join(DOCS, "PRESENTATION_10SLIDES.md"), "utf8").replace(/\r/g, "")
@@ -39,317 +42,370 @@ function canvas(dark = false) {
   return s;
 }
 
-function eyebrow(s, text, x, y, color = C.obsidian, w = 6) {
-  s.addText(text.toUpperCase(), { x, y, w, h: 0.22, fontFace: MONO, fontSize: 8.5, color, charSpacing: 1.2,
-    margin: 0, valign: "middle", isTextBox: true });
+function text(s, t, x, y, w, h, o = {}) {
+  s.addText(t, { x, y, w, h, fontFace: o.mono ? MONO : SANS, fontSize: o.size || 11, color: o.color || C.obsidian,
+    bold: o.bold || false, align: o.align || "left", valign: o.valign || "top", charSpacing: o.cs || 0,
+    lineSpacingMultiple: o.lh || 1.15, margin: 0, isTextBox: true });
 }
 
-function heading(s, text, y = 0.78, size = 28, color = C.obsidian, w = W - 2 * M) {
-  s.addText(text, { x: M, y, w, h: 0.62, fontFace: SANS, fontSize: size, color, charSpacing: -1,
-    margin: 0, valign: "middle", isTextBox: true });
+function label(s, t, x, y, w, color = C.green, size = 7.5) {
+  text(s, t.toUpperCase(), x, y, w, 0.2, { mono: true, size, color, cs: 1, valign: "middle" });
 }
 
-function card(s, x, y, w, h, opts = {}) {
+// 상단: 발표 구간 칩 + 소요 시간 + 제목
+function header(s, section, time, title, dark = false) {
+  label(s, section, M, 0.45, 5, dark ? C.smoke : C.obsidian, 8.5);
+  s.addShape(pres.shapes.ROUNDED_RECTANGLE, { x: W - M - 0.8, y: 0.43, w: 0.8, h: 0.24, rectRadius: 0.12,
+    fill: { color: dark ? C.obsidian : C.white }, line: { color: dark ? C.charcoal : C.hair, width: 0.75 } });
+  text(s, time, W - M - 0.8, 0.43, 0.8, 0.24, { mono: true, size: 7.5, color: dark ? C.smoke : C.stone, align: "center", valign: "middle" });
+  text(s, title, M, 0.75, W - 2 * M, 0.6, { size: 26, color: dark ? C.white : C.obsidian, cs: -1, valign: "middle" });
+}
+
+function card(s, x, y, w, h, o = {}) {
   s.addShape(pres.shapes.ROUNDED_RECTANGLE, { x, y, w, h, rectRadius: R,
-    fill: { color: opts.dark ? C.obsidian : opts.fill || C.white }, line: { color: opts.dark ? C.obsidian : opts.border || C.hair, width: opts.lineWidth || 0.75 } });
+    fill: { color: o.dark ? C.obsidian : o.fill || C.white },
+    line: { color: o.border || (o.dark ? C.obsidian : C.hair), width: o.lineWidth || 0.75 } });
 }
 
-function body(s, text, x, y, w, h, opts = {}) {
-  s.addText(text, { x, y, w, h, fontFace: SANS, fontSize: opts.size || 11.5, color: opts.color || C.charcoal,
-    margin: 0, valign: "top", lineSpacingMultiple: 1.2, isTextBox: true, bold: opts.bold || false });
+function hline(s, x, y, w, color = C.hair) {
+  s.addShape(pres.shapes.LINE, { x, y, w, h: 0, line: { color, width: 0.75 } });
+}
+
+function pill(s, t, x, y, w, dark = false) {
+  s.addShape(pres.shapes.ROUNDED_RECTANGLE, { x, y, w, h: 0.26, rectRadius: 0.13,
+    fill: { color: dark ? C.obsidian : C.white }, line: { color: dark ? C.obsidian : C.hair, width: 0.75 } });
+  text(s, t, x, y, w, 0.26, { mono: true, size: 7.5, color: dark ? C.white : C.obsidian, align: "center", valign: "middle", cs: 1 });
+}
+
+function image(s, file, x, y, w, pxW, pxH, alt) {
+  const h = w * pxH / pxW;
+  card(s, x, y, w + 0.2, h + 0.2);
+  s.addImage({ path: A(file), x: x + 0.1, y: y + 0.1, w, h, altText: alt });
+  return h + 0.2;
 }
 
 function footer(s, n, dark = false) {
-  s.addText("▲", { x: M, y: H - 0.42, w: 0.2, h: 0.2, fontFace: SANS, fontSize: 9, color: dark ? C.white : C.carbon, margin: 0, isTextBox: true });
-  s.addText("GNICT 2026 · 대학부 32 · AGV DIGITAL TWIN", { x: M + 0.25, y: H - 0.42, w: 5, h: 0.2, fontFace: MONO, fontSize: 7,
-    color: dark ? C.smoke : C.stone, charSpacing: 1, margin: 0, isTextBox: true });
-  s.addText(String(n).padStart(2, "0") + " / 10", { x: W - M - 1.2, y: H - 0.42, w: 1.2, h: 0.2, fontFace: MONO, fontSize: 7,
-    color: dark ? C.smoke : C.stone, align: "right", margin: 0, isTextBox: true });
+  text(s, "▲", M, H - 0.42, 0.2, 0.2, { size: 9, color: dark ? C.white : C.carbon });
+  text(s, "GNICT 2026 · 대학부 32 · AGV DIGITAL TWIN", M + 0.25, H - 0.42, 5, 0.2, { mono: true, size: 7, color: dark ? C.smoke : C.stone, cs: 1 });
+  text(s, String(n).padStart(2, "0") + " / " + TOTAL, W - M - 1.2, H - 0.42, 1.2, 0.2, { mono: true, size: 7, color: dark ? C.smoke : C.stone, align: "right" });
 }
 
-// ---------- 1. 표지 (Hero) ----------
+const cols = (n, total = W - 2 * M) => (total - (n - 1) * GAP) / n;
+
+// ---------- 1. 표지 ----------
 {
   const s = canvas();
-  eyebrow(s, "제4회 경남 AI·SW 경진대회 · 대학부 · 분야 32", M, 0.6);
-  s.addText("멈추고,\n알리고,\n사람이 빼낸다.", { x: M, y: 1.0, w: 4.6, h: 2.6, fontFace: SANS, fontSize: 42, color: C.obsidian,
-    charSpacing: -2, lineSpacingMultiple: 0.95, margin: 0, valign: "top", isTextBox: true });
+  label(s, "제4회 경남 AI·SW 경진대회 · 대학부 · 분야 32 제조 피지컬 AI", M, 0.6, 7, C.obsidian, 8.5);
+  text(s, "멈추고,\n알리고,\n사람이 빼낸다.", M, 1.0, 4.6, 2.6, { size: 42, cs: -2, lh: 0.95 });
   s.addShape(pres.shapes.ISOSCELES_TRIANGLE, { x: 5.25, y: 1.35, w: 1.7, h: 1.47, fill: { color: C.carbon }, line: { color: C.carbon, width: 0 } });
-  const stack = [["PROBLEM", "AGV 협착·교착"], ["AGENT", "LiDAR 판단 + 정지 우선"], ["INTERFACE", "VR 원격 개입"], ["HARDWARE", "TurtleBot3 × 2"]];
+  const stack = [["PROBLEM", "AGV 협착 · 멈춤 출동"], ["AGENT", "LiDAR 판단 + 정지 우선"], ["INTERFACE", "VR 원격 개입"], ["HARDWARE", "TurtleBot3 × 2 (실물)"]];
   stack.forEach(([k, v], i) => {
     const y = 1.15 + i * 0.55;
-    s.addText(k, { x: 7.55, y, w: 1.9, h: 0.2, fontFace: MONO, fontSize: 7.5, color: C.stone, charSpacing: 1.2, margin: 0, isTextBox: true });
-    s.addText(v, { x: 7.55, y: y + 0.2, w: 1.95, h: 0.25, fontFace: SANS, fontSize: 11, color: C.obsidian, margin: 0, isTextBox: true });
+    label(s, k, 7.55, y, 1.9, C.stone);
+    text(s, v, 7.55, y + 0.2, 1.95, 0.25, { size: 11 });
   });
-  body(s, "MetaQuest2 VR 기반 피지컬 AI AGV 원격 개입 & 협착 방지 디지털 트윈", M, 3.75, 5.4, 0.35, { size: 12.5 });
+  text(s, "MetaQuest2 VR 기반 피지컬 AI AGV 원격 개입 & 협착 방지 디지털 트윈", M, 3.75, 5.6, 0.35, { size: 12.5, color: C.charcoal });
   s.addShape(pres.shapes.ROUNDED_RECTANGLE, { x: M, y: 4.3, w: 1.55, h: 0.36, rectRadius: R, fill: { color: C.obsidian }, line: { color: C.obsidian, width: 0.75 } });
-  s.addText("▲  Live Demo", { x: M, y: 4.3, w: 1.55, h: 0.36, fontFace: SANS, fontSize: 10.5, color: C.white, align: "center", valign: "middle", margin: 0, isTextBox: true });
+  text(s, "▲  Live Demo", M, 4.3, 1.55, 0.36, { size: 10.5, color: C.white, align: "center", valign: "middle" });
   s.addShape(pres.shapes.ROUNDED_RECTANGLE, { x: M + 1.7, y: 4.3, w: 2.9, h: 0.36, rectRadius: R, fill: { color: C.paper }, line: { color: C.hair, width: 0.75 } });
-  s.addText("국립한국해양대학교 · [팀명] · [발표자]", { x: M + 1.7, y: 4.3, w: 2.9, h: 0.36, fontFace: SANS, fontSize: 10, color: C.charcoal, align: "center", valign: "middle", margin: 0, isTextBox: true });
+  text(s, "국립한국해양대학교 · [팀명] · [발표자]", M + 1.7, 4.3, 2.9, 0.36, { size: 10, color: C.charcoal, align: "center", valign: "middle" });
   footer(s, 1);
   addNotes(s, 1);
 }
 
-// ---------- 2. 배경·문제 ----------
+// ---------- 2. 문제 (30초) — 누구의 어떤 문제 ----------
 {
   const s = canvas();
-  eyebrow(s, "01 — Problem", M, 0.5);
-  heading(s, "사람과 AGV가 같은 통로를 쓸 때");
-  const stats = [
-    ["53%", "끼임 재해", "산업용 로봇 사고 1위\n부딪힘 34%가 뒤를 잇는다", "KOSHA · 2011–2020 · n=355"],
-    ["66", "2024년 끼임 사망자", "전국 산업현장 압착 사망\n전년 대비 +22.2% 급증", "고용노동부 · 2024 재해조사 통계"],
-    ["$2.3M", "시간당 라인 정지 비용", "자동차·배터리 공장 최대치\nFMCG 평균 $36,000/h", "Siemens Senseye · Downtime 2024"],
+  header(s, "1 · Problem — 누구의 어떤 문제", "0:30", "AGV와 같은 통로를 쓰는 사람들");
+  const who = [
+    ["현장 작업자", "AGV와 부딪히고 끼인다"],
+    ["관제사·관리자", "멈출 때마다 현장 출동"],
+    ["공장", "통로가 막히면 라인이 선다"],
   ];
-  const cw = (W - 2 * M - 2 * 0.2) / 3;
-  stats.forEach(([big, head, sub, src], k) => {
-    const x = M + k * (cw + 0.2), y = 1.65;
-    card(s, x, y, cw, 2.85);
-    s.addText(big, { x: x + 0.22, y: y + 0.2, w: cw - 0.44, h: 0.85, fontFace: SANS, fontSize: 40, color: C.obsidian, charSpacing: -2, margin: 0, valign: "middle", isTextBox: true });
-    s.addText(head, { x: x + 0.22, y: y + 1.1, w: cw - 0.44, h: 0.3, fontFace: SANS, fontSize: 13, color: C.obsidian, margin: 0, isTextBox: true });
-    body(s, sub, x + 0.22, y + 1.45, cw - 0.44, 0.6, { size: 10.5 });
-    s.addShape(pres.shapes.LINE, { x: x + 0.22, y: y + 2.3, w: cw - 0.44, h: 0, line: { color: C.hair, width: 0.75 } });
-    s.addText(src.toUpperCase(), { x: x + 0.22, y: y + 2.38, w: cw - 0.44, h: 0.3, fontFace: MONO, fontSize: 6.5, color: C.stone, charSpacing: 0.6, margin: 0, isTextBox: true });
+  const lw = 2.75;
+  label(s, "WHO · 사용자", M, 1.55, lw);
+  who.forEach(([k, v], i) => {
+    const y = 1.85 + i * 0.68;
+    card(s, M, y, lw, 0.58, { dark: i === 1 });
+    text(s, k, M + 0.18, y + 0.08, lw - 0.36, 0.22, { size: 11.5, bold: true, color: i === 1 ? C.white : C.obsidian });
+    text(s, v, M + 0.18, y + 0.31, lw - 0.36, 0.22, { size: 9.5, color: i === 1 ? C.ash : C.charcoal });
   });
-  body(s, "멈춘 AGV는 사람이 걸어올 때까지 통로를 막는다. 사고와 정지 비용은 같은 지점에서 생긴다.", M, 4.65, W - 2 * M, 0.3, { size: 11, color: C.obsidian });
+
+  const rx = M + lw + GAP, rw = W - M - rx, cw = cols(3, rw);
+  label(s, "WHAT · 근거", rx, 1.55, rw);
+  const stats = [
+    ["53%", "로봇 재해 중 끼임", "KOSHA 2011–2020"],
+    ["66명", "2024 끼임 사망 +22.2%", "고용노동부 2025"],
+    ["$2.3M/h", "자동차 라인 정지 최대", "Siemens 2024"],
+  ];
+  stats.forEach(([big, head, src], k) => {
+    const x = rx + k * (cw + GAP), y = 1.85;
+    card(s, x, y, cw, 1.95);
+    text(s, big, x + 0.16, y + 0.16, cw - 0.32, 0.6, { size: 26, cs: -1.5, valign: "middle" });
+    text(s, head, x + 0.16, y + 0.85, cw - 0.32, 0.45, { size: 10, color: C.charcoal });
+    hline(s, x + 0.16, y + 1.5, cw - 0.32);
+    label(s, src, x + 0.16, y + 1.58, cw - 0.32, C.stone, 6.5);
+  });
+  card(s, M, 4.02, W - 2 * M, 0.85, { border: C.obsidian });
+  label(s, "보급형 AGV의 한계", M + 0.2, 4.12, 3);
+  text(s, "① 2D LiDAR 한 평면만 본다   ② 뒤를 못 봐 스스로 못 물러난다   ③ 멈추면 사람이 걸어가야 풀린다",
+    M + 0.2, 4.38, W - 2 * M - 0.4, 0.35, { size: 11.5, valign: "middle" });
   footer(s, 2);
   addNotes(s, 2);
 }
 
-// ---------- 3. 3대 한계 (출처 및 표준 규격 명시) ----------
+// ---------- 3. Agent 설명 (1분) — 목표 · 역할 · 핵심기능 ----------
 {
   const s = canvas();
-  eyebrow(s, "02 — Limits", M, 0.5);
-  heading(s, "보급형 AGV가 풀지 못한 세 가지");
-  const cols = [
-    ["01", "높이 사각지대", "2D LiDAR는 한 평면(Burger 바닥 약 0.17m)만 스캔. 선반 돌출물, 포크, 작업자 상체는 놓친다. 3D LiDAR는 중소 현장에 부담이 크다.", "ISO 3691-4:2020 · 무인 산업차량 안전요건"],
-    ["02", "자율 후진의 역설", "규격은 주행 방향의 사람 감지·보호를 요구한다. 후방 감지 없는 로봇이 스스로 물러날 수 없으니 결국 비상정지로 끝난다.", "ISO 3691-4 · ANSI/ITSDF B56.5 · 주행 방향 보호"],
-    ["03", "물리적 출동", "정지된 AGV는 관리자가 현장까지 가서 확인·조작해야 풀린다. 그동안 같은 통로와 라인이 멈춘다.", "Siemens · True Cost of Downtime 2024"],
+  header(s, "2 · Agent — 목표 · 역할 · 핵심기능", "1:00", "판단은 로봇이, 결정은 사람이");
+  const gw = 2.75;
+  card(s, M, 1.55, gw, 1.5, { dark: true });
+  label(s, "GOAL · 목표", M + 0.2, 1.7, gw - 0.4, C.smoke);
+  text(s, "AGV 2대 운용 중\n협착·충돌 0건,\n막히면 출동 없이 원격 탈출", M + 0.2, 2.0, gw - 0.4, 0.95, { size: 12.5, color: C.white });
+
+  card(s, M, 3.2, gw, 1.67);
+  label(s, "ROLE · 역할 분담", M + 0.2, 3.32, gw - 0.4);
+  text(s, "Agent  감시 · 정지 · 원인 · 경로 추천", M + 0.2, 3.62, gw - 0.4, 0.3, { size: 10 });
+  hline(s, M + 0.2, 3.98, gw - 0.4);
+  text(s, "사람  로봇 선택 · VR 조종 · 재개 승인", M + 0.2, 4.08, gw - 0.4, 0.3, { size: 10 });
+  hline(s, M + 0.2, 4.44, gw - 0.4);
+  text(s, "자동 후진·자동 재개 없음", M + 0.2, 4.52, gw - 0.4, 0.25, { size: 9.5, color: C.green, bold: true });
+
+  const rx = M + gw + GAP, rw = W - M - rx, cw = cols(2, rw), ch = 1.57;
+  const feats = [
+    ["01 · STOP", "위험하면 즉시 멈춘다", "전방 0.35m · AGV 간 0.3m → 전진 지령 0. 후진은 후방 0.20m 가드."],
+    ["02 · NOTIFY", "원인과 탈출 경로를 그린다", "LiDAR 72방향 탈출 경로를 영상 바닥·관제 맵에 표시, 돌 쪽 손 진동."],
+    ["03 · TAKE OVER", "클릭 한 번에 VR 콕핏", "관제 맵 클릭 → 그 로봇만 MANUAL → 그립 데드맨 + 양손 스틱."],
+    ["04 · MULTI-AGV", "2대 AUTO와 만남 처리", "각자 직진 순찰, 0.3m 안에서 만나면 둘 다 정지, 사람이 한 대를 비킨다."],
   ];
-  const cw = (W - 2 * M - 2 * 0.2) / 3;
-  cols.forEach(([n, head, txt, src], k) => {
-    const x = M + k * (cw + 0.2), y = 1.65, dark = k === 1;
-    card(s, x, y, cw, 3.05, { dark });
-    s.addText(n, { x: x + 0.22, y: y + 0.22, w: 1, h: 0.25, fontFace: MONO, fontSize: 9, color: dark ? C.smoke : C.stone, charSpacing: 1.2, margin: 0, isTextBox: true });
-    s.addText(head, { x: x + 0.22, y: y + 0.55, w: cw - 0.44, h: 0.45, fontFace: SANS, fontSize: 18, color: dark ? C.white : C.obsidian, charSpacing: -0.6, margin: 0, isTextBox: true });
-    body(s, txt, x + 0.22, y + 1.15, cw - 0.44, 1.35, { size: 10.5, color: dark ? C.ash : C.charcoal });
-    s.addShape(pres.shapes.LINE, { x: x + 0.22, y: y + 2.55, w: cw - 0.44, h: 0, line: { color: dark ? C.charcoal : C.hair, width: 0.75 } });
-    s.addText(src.toUpperCase(), { x: x + 0.22, y: y + 2.62, w: cw - 0.44, h: 0.3, fontFace: MONO, fontSize: 6.5, color: dark ? C.smoke : C.stone, charSpacing: 0.6, margin: 0, isTextBox: true });
+  feats.forEach(([k, h, t], i) => {
+    const x = rx + (i % 2) * (cw + GAP), y = 1.55 + Math.floor(i / 2) * (ch + 0.15);
+    card(s, x, y, cw, ch);
+    label(s, k, x + 0.2, y + 0.15, cw - 0.4);
+    text(s, h, x + 0.2, y + 0.42, cw - 0.4, 0.3, { size: 13.5 });
+    text(s, t, x + 0.2, y + 0.8, cw - 0.4, 0.7, { size: 9.5, color: C.charcoal });
   });
   footer(s, 3);
   addNotes(s, 3);
 }
 
-// ---------- 4. 솔루션 + 대응 프로세스 패러다임 전환 비교 ----------
+// ---------- 4. 구조 ① Workflow (구조 1분 중 30초) ----------
 {
   const s = canvas();
-  eyebrow(s, "03 — Solution", M, 0.5);
-  heading(s, "정지 우선, 그리고 VR 원격 개입");
+  header(s, "3 · Architecture — Workflow", "0:30", "순찰 → 정지 → 경로 → 개입 → 재개");
   const steps = [
-    ["STOP", "위험하면 즉시 멈춘다", "전방 0.35m · AGV 간 1.0m → 속도 즉시 0. 자동 후진 없음."],
-    ["NOTIFY", "원인과 탈출 경로를 그린다", "정지 원인 + LiDAR 360° 탈출 경로를 영상 바닥에 투영."],
-    ["TAKE OVER", "사람이 VR로 즉각 빼낸다", "관제 맵 클릭 → VR 콕핏 텔레포트 → 그립 데드맨 조종."],
+    ["01", "AUTO 순찰", "R 키, 2대 직진 0.10 m/s"],
+    ["02", "위험 감지", "LiDAR 360° · odom 20 Hz"],
+    ["03", "정지 게이트", "전진 0 · 원인 기록"],
+    ["04", "탈출 경로", "72방향 회랑 · 영상 투영"],
+    ["05", "VR 개입", "클릭 → 콕핏 · 데드맨"],
+    ["06", "AUTO 재개", "사람이 R · 자동 재개 없음"],
   ];
-  steps.forEach(([tag, head, txt], k) => {
-    const y = 1.6 + k * 0.95;
-    s.addShape(pres.shapes.ROUNDED_RECTANGLE, { x: M, y, w: 1.05, h: 0.26, rectRadius: 0.13, fill: { color: k === 2 ? C.obsidian : C.white }, line: { color: k === 2 ? C.obsidian : C.hair, width: 0.75 } });
-    s.addText(tag, { x: M, y, w: 1.05, h: 0.26, fontFace: MONO, fontSize: 7.5, color: k === 2 ? C.white : C.obsidian, align: "center", valign: "middle", charSpacing: 1, margin: 0, isTextBox: true });
-    s.addText(head, { x: M + 1.25, y: y - 0.04, w: 3.3, h: 0.3, fontFace: SANS, fontSize: 14, color: C.obsidian, margin: 0, isTextBox: true });
-    body(s, txt, M + 1.25, y + 0.3, 3.3, 0.5, { size: 10 });
+  const cw = cols(6), y = 1.65;
+  steps.forEach(([n, h, t], i) => {
+    const x = M + i * (cw + GAP), dark = i === 2 || i === 4;
+    card(s, x, y, cw, 1.45, { dark });
+    label(s, n, x + 0.14, y + 0.14, cw - 0.28, dark ? C.smoke : C.stone);
+    text(s, h, x + 0.14, y + 0.42, cw - 0.28, 0.3, { size: 12.5, color: dark ? C.white : C.obsidian });
+    text(s, t, x + 0.14, y + 0.8, cw - 0.28, 0.55, { size: 8.5, color: dark ? C.ash : C.charcoal });
+    if (i < steps.length - 1) text(s, "›", x + cw, y + 0.5, GAP, 0.4, { size: 16, color: C.smoke, align: "center", valign: "middle" });
   });
+  text(s, "Agent 구간: 01–04 · 사람 구간: 05–06", M, 3.2, 5, 0.22, { mono: true, size: 7.5, color: C.stone });
 
-  // 우측: Before vs After 대응 프로세스 비교 카드
-  const rx = 5.25, rw = W - M - rx;
-  card(s, rx, 1.55, rw, 1.4, { fill: C.white, border: C.hair });
-  s.addText("CONVENTIONAL AGV · 기존 대응 방식", { x: rx + 0.2, y: 1.68, w: rw - 0.4, h: 0.22, fontFace: MONO, fontSize: 7.5, color: C.stone, charSpacing: 1, margin: 0, isTextBox: true });
-  body(s, "• 위험 감지: 단순 E-STOP 급정지 (통로 마비)\n• 복구 방식: 관리자 현장 출동 (도착까지 통로 정체)\n• 2차 위험: 사각지대 맹목적 후진 시 보행자 2차 협착 발생", rx + 0.2, 1.95, rw - 0.4, 0.85, { size: 9.5, color: C.charcoal });
-
-  card(s, rx, 3.08, rw, 1.52, { fill: C.white, border: C.green, lineWidth: 1.2 });
-  s.addText("PHYSICAL AI SOLUTION · 본 제안 솔루션", { x: rx + 0.2, y: 3.22, w: rw - 0.4, h: 0.22, fontFace: MONO, fontSize: 7.5, color: C.green, charSpacing: 1, margin: 0, isTextBox: true });
-  body(s, "• 안전 게이트: 전방 0.35m · AGV 간 1.0m 전진 지령 차단 (릴레이)\n• 시각적 안내: LiDAR 탈출 방향·선회 경로를 FPV 영상 바닥에 투영\n• 원격 개입: 관제 클릭 → 그 로봇 콕핏 즉시 전환 (그 로봇만 MANUAL)\n• 복귀: 후진·회전 수동 탈출 → Y/R로 AUTO 재개 (자동 재개 없음)", rx + 0.2, 3.48, rw - 0.4, 1.0, { size: 9.5, color: C.obsidian });
-
+  const by = 3.55, bw = cols(3);
+  const cmr = [
+    ["CONDITION · 조건", "전방 < 0.35m 또는 AGV 간 중심 < 0.3m → 전진 지령 차단"],
+    ["METHOD · 방법", "5° × 72방향 로봇 폭 회랑 여유 d(h), 0.5m 미만 제외, J = d − 0.25·|h| 최대"],
+    ["RESULT · 결과", "최적 방향을 FPV 바닥 경로 띠·선회 화살표로 투영, 조작은 사람"],
+  ];
+  cmr.forEach(([k, v], i) => {
+    const x = M + i * (bw + GAP);
+    card(s, x, by, bw, 1.3, { border: i === 2 ? C.green : C.hair, lineWidth: i === 2 ? 1.2 : 0.75 });
+    label(s, k, x + 0.18, by + 0.14, bw - 0.36);
+    text(s, v, x + 0.18, by + 0.44, bw - 0.36, 0.8, { size: 10 });
+  });
   footer(s, 4);
   addNotes(s, 4);
 }
 
-// ---------- 5. 아키텍처 (3대 Tier 포괄적 그룹핑) ----------
+// ---------- 5. 구조 ② AI · Tool · Data · Memory (구조 1분 중 30초) ----------
 {
   const s = canvas();
-  eyebrow(s, "04 — Architecture", M, 0.5);
-  heading(s, "로봇 두 대, 릴레이 하나, 화면 둘");
-  const fw = 5.8, fh = fw * 718 / 1512;
-  card(s, M, 1.55, fw + 0.24, fh + 0.24);
-  s.addImage({ path: A("fig_architecture_body.png"), x: M + 0.12, y: 1.67, w: fw, h: fh, altText: "시스템 아키텍처" });
-
-  const tiers = [
-    ["TIER 1 · PHYSICAL FIELD", "TurtleBot3 × 2 (ROS 1 · ROS 2)\nLDS-02 LiDAR · Pi Camera 15.7 fps"],
-    ["TIER 2 · AI RELAY AGENT", "Python asyncio · 20 Hz rosbridge\nLiDAR 기하 추론 · 안전 게이트"],
-    ["TIER 3 · DIGITAL TWIN & VR", "Unity 6 + OpenXR (PC·HMD 분리)\nPC 관제 맵 · Quest 2 콕핏"],
+  header(s, "3 · Architecture — AI · Tool · Data · Memory", "0:30", "로봇 두 대, 릴레이 하나, 화면 둘");
+  const ih = image(s, "fig_architecture_body.png", M, 1.55, 4.9, 1512, 718, "시스템 아키텍처");
+  text(s, "안전 게이트를 통과한 속도만 /cmd_vel로 나간다 · 20 Hz", M, 1.55 + ih + 0.08, 5.1, 0.2, { mono: true, size: 6.5, color: C.stone, cs: 0.6 });
+  const items = [
+    ["AI", "LiDAR 기하 추론 (VFH·Follow-the-Gap 계열) · 곡률 궤적 (DWA 계열) · LLM 미사용"],
+    ["TOOL", "ROS /cmd_vel · /odom · /scan (rosbridge) · ustreamer 카메라 · WebSocket · Unity · Quest 2"],
+    ["DATA", "실시간 LiDAR 360° · 휠 odom · 640×480 영상 · 학습 데이터 수집 없음"],
+    ["MEMORY", "로봇별 AUTO/MANUAL · 정지 원인 · 위치 원점 · 운행 이력 JSONL"],
   ];
-  tiers.forEach(([k, v], i) => {
-    const x = 6.85, y = 1.55 + i * 1.02;
-    card(s, x, y, 2.6, 0.92);
-    s.addText(k, { x: x + 0.15, y: y + 0.12, w: 2.3, h: 0.2, fontFace: MONO, fontSize: 7.5, color: C.green, charSpacing: 1.0, margin: 0, isTextBox: true });
-    body(s, v, x + 0.15, y + 0.35, 2.35, 0.5, { size: 9.5, color: C.obsidian });
+  const rx = M + 5.3, rw = W - M - rx, ch = 0.78;
+  items.forEach(([k, v], i) => {
+    const y = 1.55 + i * (ch + 0.1);
+    card(s, rx, y, rw, ch);
+    label(s, k, rx + 0.16, y + 0.1, rw - 0.32);
+    text(s, v, rx + 0.16, y + 0.32, rw - 0.32, 0.44, { size: 8.5 });
   });
   footer(s, 5);
   addNotes(s, 5);
 }
 
-// ---------- 6. AI Agent 6요소 ----------
+// ---------- 6. 실제 시연 ① 입력 → 판단 → Tool → 결과 (2분 30초 중) ----------
 {
   const s = canvas();
-  eyebrow(s, "05 — AI Agent", M, 0.5);
-  heading(s, "AI Agent 6요소");
-  const items = [
-    ["GOAL", "AGV 2대 협착·충돌 0건, 봉착 시 무사고 탈출"],
-    ["PLANNING", "순찰 → 위험 감지 → 인터록 정지 → 탈출 경로 → 수동 개입 → 재개"],
-    ["REASONING", "360° LiDAR 섹터 거리 · 로봇 폭 회랑 · 곡률 원호 · AGV 간 거리"],
-    ["TOOL USE", "ROS /cmd_vel · /odom · /scan, ustreamer, WebSocket, Unity"],
-    ["MEMORY", "로봇별 AUTO/MANUAL, 정지 원인, 배회·위치 원점, 운행 이력"],
-    ["FEEDBACK", "영상 경로 띠 · 선회 화살표 · 적색 경고 · 손 방향 진동"],
+  header(s, "4 · Live Demo — 입력 → 판단 → Tool → 결과", "2:30", "실물 2대로 보여드리는 한 바퀴");
+  const head = ["막", "입력", "판단 (Agent)", "Tool 호출", "결과"];
+  const rows = [
+    ["① 자율 순찰", "관제 PC  R", "로봇 간 0.3m · 전방 0.35m 감시", "/cmd_vel 0.10 m/s 직진", "2대 주행 → 접근 시 둘 다 정지"],
+    ["② 정지·알림", "작업자 진입", "전방 0.35m 안 → 전진 차단", "/cmd_vel 0 · 텔레메트리 STOP", "지도 적색 · 원인 표시 · 경로 띠"],
+    ["③ VR 개입", "관제 맵 클릭", "그 로봇만 MANUAL · 탈출 방향 산출", "Quest 콕핏 · 손 방향 진동", "그립 + 스틱으로 후진·선회 탈출"],
+    ["④ 안전장치", "그립 놓기 · 과속", "데드맨 · 상한 0.15 m/s · 워치독 0.5s", "/cmd_vel 0 또는 제한", "즉시 정지 · 속도 제한"],
+    ["⑤ 재개", "관제 PC  R", "사람 승인 시에만 AUTO", "/cmd_vel 0.10 m/s", "순찰 복귀"],
   ];
-  const cw = (W - 2 * M - 2 * 0.2) / 3, ch = 1.35;
-  items.forEach(([k, v], i) => {
-    const x = M + (i % 3) * (cw + 0.2), y = 1.6 + Math.floor(i / 3) * (ch + 0.2);
-    card(s, x, y, cw, ch, { dark: i === 0 });
-    s.addText(k, { x: x + 0.2, y: y + 0.18, w: cw - 0.4, h: 0.2, fontFace: MONO, fontSize: 8, color: i === 0 ? C.smoke : C.green, charSpacing: 1.2, margin: 0, isTextBox: true });
-    body(s, v, x + 0.2, y + 0.48, cw - 0.4, ch - 0.6, { size: 11, color: i === 0 ? C.white : C.obsidian });
+  const cw = [1.25, 1.35, 2.35, 2.0, 1.95], x0 = M, y0 = 1.5, rh = 0.56;
+  card(s, M, y0, W - 2 * M, 0.38 + rows.length * rh + 0.08);
+  let x = x0 + 0.15;
+  head.forEach((h, i) => { label(s, h, x, y0 + 0.1, cw[i] - 0.1, C.stone); x += cw[i]; });
+  hline(s, M + 0.15, y0 + 0.36, W - 2 * M - 0.3);
+  rows.forEach((r, ri) => {
+    const y = y0 + 0.42 + ri * rh;
+    let cx = x0 + 0.15;
+    r.forEach((c, ci) => {
+      text(s, c, cx, y, cw[ci] - 0.12, rh - 0.08, { size: ci === 0 ? 10.5 : 9.5, bold: ci === 0, valign: "middle",
+        color: ci === 4 ? C.green : (ci === 0 ? C.obsidian : C.charcoal) });
+      cx += cw[ci];
+    });
+    if (ri < rows.length - 1) hline(s, M + 0.15, y + rh - 0.03, W - 2 * M - 0.3);
   });
+  text(s, "화면 4분할: 관제 맵 · Quest 콕핏 · 릴레이 터미널 로그 · 실물 로봇 캠  —  라이브 불가 시 시연 영상 2~4막으로 대체", M, 4.92, W - 2 * M, 0.2,
+    { mono: true, size: 7, color: C.stone, cs: 0.4 });
   footer(s, 6);
   addNotes(s, 6);
 }
 
-// ---------- 7. 핵심 알고리즘 (조건 · 방법 · 결과 3단 논문식 약소화) ----------
+// ---------- 7. 실제 시연 ② 화면에서 보이는 것 ----------
 {
   const s = canvas();
-  eyebrow(s, "06 — Algorithm", M, 0.5);
-  heading(s, "판단은 기하로, 결정은 사람에게");
-  const steps = [
-    ["01 · CONDITION (조건)", "전방 장애물 d < 0.35m 또는 AGV 간 거리 < 1.0m\n→ 전진 명령 즉시 차단 (vx = 0), 정지·알림 상태 진입"],
-    ["02 · METHOD (방법)", "360° LiDAR 72방향 회랑 폭(w=0.24m) 여유 d(h) 탐색\n목적 함수: argmax [d(h) - 0.25|h|] (최대 여유 & 최소 회전)"],
-    ["03 · RESULT (결과)", "최적 방위각 → FPV 바닥 가이드라인·선회 화살표 투영\n전진 차단 유지, 후진(후방 0.20m 가드)·회전은 사람이 조작"],
+  header(s, "4 · Live Demo — 화면 근거", "2:30", "멈춘 이유와 빠져나갈 길이 보인다");
+  const w1 = 2.3;
+  const h1 = image(s, "overlay_stop_path.jpg", M, 1.55, w1, 640, 480, "콕핏 영상 위 정지 배너와 경로");
+  const x2 = M + w1 + 0.2 + GAP;
+  image(s, "topdown_warning_on.png", x2, 1.55, h1 - 0.2, 720, 720, "관제 맵 적색 경고");
+  const x3 = x2 + (h1 - 0.2) + 0.2 + GAP, rw = W - M - x3;
+  const caps = [
+    ["COCKPIT", "영상 바닥에 추천 궤적 띠 · 선회 화살표 · 적색 정지 배너"],
+    ["GOD-VIEW", "멈춘 로봇은 적색 차체 · 위험 원판, 사이드바에 정지 원인"],
+    ["TERMINAL", "[AUTO] … STUCK · [INTERLOCK] 이벤트 = 판단 → Tool 호출 기록"],
   ];
-  steps.forEach(([k, v], i) => {
-    const y = 1.62 + i * 0.95;
-    s.addText(k, { x: M, y, w: 3.7, h: 0.22, fontFace: MONO, fontSize: 8.5, color: C.green, charSpacing: 1.2, margin: 0, isTextBox: true });
-    body(s, v, M, y + 0.25, 3.7, 0.62, { size: 10, color: C.obsidian });
-    if (i < steps.length - 1) s.addShape(pres.shapes.LINE, { x: M, y: y + 0.88, w: 3.7, h: 0, line: { color: C.hair, width: 0.75 } });
+  caps.forEach(([k, v], i) => {
+    const y = 1.55 + i * 0.75;
+    label(s, k, x3, y, rw);
+    text(s, v, x3, y + 0.24, rw, 0.45, { size: 9.5, color: C.charcoal });
   });
-  const fw = 5.0, fh = fw * 829 / 1885;
-  card(s, 4.55, 1.55, fw + 0.24, fh + 0.24);
-  s.addImage({ path: A("fig_escape_planner.png"), x: 4.67, y: 1.67, w: fw, h: fh, altText: "탈출 경로 계산 예" });
-  s.addText("PLAN_ESCAPE · 전방 상자 + 우측 벽 → 좌 40° 선택", { x: 4.55, y: 1.55 + fh + 0.32, w: fw + 0.24, h: 0.2, fontFace: MONO, fontSize: 6.5, color: C.stone, charSpacing: 0.6, margin: 0, isTextBox: true });
-  body(s, "VFH · Follow-the-Gap 계열 국소 반응형. 경로는 카메라 영상 바닥에 핀홀 모델(렌즈 0.16m, 62.2°)로 투영. 자동 후진 없음.", 4.55, 4.3, fw + 0.24, 0.5, { size: 9.5 });
+  const ey = 1.55 + h1 + 0.15;
+  const eh = image(s, "fig_escape_planner.png", M, ey, 2.6, 1885, 829, "탈출 경로 계산 예");
+  text(s, "plan_escape · 전방 상자 + 우측 벽 → 좌 40° 선택 (실제 계산 결과 그림)", M + 3.0, ey + 0.1, W - 2 * M - 3.0, 0.4, { size: 10 });
+  text(s, "그림은 실제 출력 예시 · 발표 당일 라이브 화면이 우선", M + 3.0, ey + 0.5, W - 2 * M - 3.0, 0.2, { mono: true, size: 7, color: C.stone });
   footer(s, 7);
   addNotes(s, 7);
 }
 
-// ---------- 8. 정량 실증 (5대 현장 시나리오별 검증 체계) ----------
+// ---------- 8. 성과 (30초) — Before / After · 검증 · 효과 ----------
 {
   const s = canvas();
-  eyebrow(s, "07 — Verification", M, 0.5);
-  heading(s, "5대 현장 시나리오 검증 · 73/73");
-
-  const scenarios = [
-    ["SCENARIO 01", "정면 돌발 장애물 봉착", "전방 0.3m 급정지, 전진 차단 / 후진·선회 수동 허용"],
-    ["SCENARIO 02", "AGV 대향 마주침 교착", "2대 대향 접근 (거리 < 1.0m) → 양방향 STUCK 정지"],
-    ["SCENARIO 03", "사방 협착 및 막다른 길", "사방 통과 여유 0.5m 미만 → STUCK(dead end), 자동 재개 없음"],
-    ["SCENARIO 04", "VR 원격 텔레포트 개입", "관제 맵 클릭 → 콕핏 즉시 전환(그 로봇만 MANUAL) → 양손 탈출"],
-    ["SCENARIO 05", "센서 결측치 방어 대응", "LD08 무효값 0.0 제외, 명령·odom 0.5s / scan 1.0s 끊김 시 정지"],
+  header(s, "5 · Impact — Before / After · 검증 · 효과", "0:30", "멈춤은 같아도, 푸는 방법이 바뀐다");
+  const bw = cols(2, 5.3);
+  const ba = [
+    ["BEFORE · 기존 보급형 AGV", ["단순 비상정지 → 통로 마비", "관리자 현장 출동 후 수동 조작", "정지 이유 기록 없음"], false],
+    ["AFTER · 본 시스템", ["전진만 차단, 후진·회전은 허용", "관제석에서 클릭 → VR로 바로 탈출", "정지 원인·경로가 화면·로그에 남음"], true],
   ];
-  const lw = 5.2;
-  card(s, M, 1.55, lw, 3.15);
-  scenarios.forEach(([tag, head, desc], i) => {
-    const y = 1.68 + i * 0.58;
-    s.addText(tag, { x: M + 0.2, y, w: 1.1, h: 0.2, fontFace: MONO, fontSize: 7.5, color: C.green, charSpacing: 0.8, margin: 0, isTextBox: true });
-    s.addText(head, { x: M + 1.35, y, w: 1.6, h: 0.2, fontFace: SANS, fontSize: 10, color: C.obsidian, bold: true, margin: 0, isTextBox: true });
-    s.addText(desc, { x: M + 0.2, y: y + 0.22, w: lw - 0.4, h: 0.25, fontFace: SANS, fontSize: 8.5, color: C.charcoal, margin: 0, isTextBox: true });
-    if (i < scenarios.length - 1) s.addShape(pres.shapes.LINE, { x: M + 0.2, y: y + 0.52, w: lw - 0.4, h: 0, line: { color: C.hair, width: 0.5 } });
+  ba.forEach(([k, list, on], i) => {
+    const x = M + i * (bw + GAP);
+    card(s, x, 1.55, bw, 2.1, { border: on ? C.green : C.hair, lineWidth: on ? 1.2 : 0.75 });
+    label(s, k, x + 0.18, 1.68, bw - 0.36, on ? C.green : C.stone);
+    text(s, list.map(t => "• " + t).join("\n"), x + 0.18, 2.0, bw - 0.36, 1.5, { size: 10.5, lh: 1.45, color: on ? C.obsidian : C.charcoal });
   });
+  card(s, M, 3.8, 5.3, 1.07);
+  label(s, "사용자 검증 · 사실 그대로", M + 0.18, 3.9, 5);
+  text(s, "팀원이 관제사·VR 조작자 역할로 실물 TB1·TB2 정지·주행·콕핏 전환 확인.\n외부 사용자 평가와 현장 정지 시간(MTBI) 측정은 아직 하지 않음.",
+    M + 0.18, 4.16, 4.95, 0.65, { size: 9.5, color: C.charcoal });
 
-  const stats = [["73/73", "가상 브리지 자동 시험"], ["2대", "실물 TurtleBot3"], ["20 Hz", "제어 릴레이 주기"], ["15.7 fps", "실측 영상 수신"]];
-  stats.forEach(([big, label], i) => {
-    const x = 6.05 + (i % 2) * 1.7, y = 1.55 + Math.floor(i / 2) * 1.6;
-    card(s, x, y, 1.55, 1.45);
-    s.addText(big, { x: x + 0.15, y: y + 0.22, w: 1.25, h: 0.6, fontFace: SANS, fontSize: 26, color: C.obsidian, charSpacing: -1.5, margin: 0, isTextBox: true });
-    s.addText(label.toUpperCase(), { x: x + 0.15, y: y + 0.95, w: 1.25, h: 0.35, fontFace: MONO, fontSize: 7, color: C.stone, charSpacing: 0.8, margin: 0, isTextBox: true });
+  const rx = M + 5.3 + GAP, rw = W - M - rx, sw = cols(2, rw);
+  const stats = [["78/78", "E2E 자동 시험"], ["10회", "반복 무결점"], ["0건", "300초 부하 안전 위반"], ["20 Hz", "제어·텔레메트리"]];
+  stats.forEach(([big, lab], i) => {
+    const x = rx + (i % 2) * (sw + GAP), y = 1.55 + Math.floor(i / 2) * 1.0;
+    card(s, x, y, sw, 0.88, { dark: i === 0 });
+    text(s, big, x + 0.15, y + 0.1, sw - 0.3, 0.45, { size: 20, cs: -1, valign: "middle", color: i === 0 ? C.white : C.obsidian });
+    label(s, lab, x + 0.15, y + 0.58, sw - 0.3, i === 0 ? C.smoke : C.stone, 6.5);
   });
+  card(s, rx, 3.6, rw, 1.27, { border: C.obsidian });
+  label(s, "효과", rx + 0.16, 3.7, rw - 0.32);
+  text(s, "• 출동 대기 없이 원격 복구\n• 3D LiDAR 없이 기존 기체 + SW\n• ROS 1·2 혼합 2대를 한 화면에", rx + 0.16, 3.95, rw - 0.32, 0.88, { size: 9.5, lh: 1.3 });
   footer(s, 8);
   addNotes(s, 8);
 }
 
-// ---------- 9. 시스템 한계 및 기술적 과제 ----------
+// ---------- 9. 발전계획 ① 한계와 현장 적용 전 보완점 (30초 중) ----------
 {
   const s = canvas();
-  eyebrow(s, "08 — Limitations", M, 0.5);
-  heading(s, "시스템 한계 및 기술적 과제");
-  const limits = [
-    ["01", "2D LiDAR 단일 평면 한계", "지상 0.17m 평면만 스캔하여 상부 돌출 적재물과 천장 행잉 케이블 미감지.", "향후 과제: RGB-D 심도 카메라 및 상부 초음파 센서 다중 융합"],
-    ["02", "산업 현장 통신 음영 구역", "공장 내 대형 철골 구조물 차폐 및 Wi-Fi 음영 구역에서 원격 제어 지연 발생 위험.", "향후 과제: 이음5G(Private 5G) 인프라 연계 및 로봇 온디바이스 비상 SLAM"],
-    ["03", "다대 로봇 동시 교착 병목", "3대 이상 다중 AGV가 좁은 병목 구간에서 동시 교착 시 1인 작업자 순차 개입 대기 발생.", "향후 과제: VDA 5050 상위 플릿 매니저 연동 및 교착 우선순위 자동 배차"],
+  header(s, "6 · Next — 한계 · 현장 적용 전 보완점", "0:30", "현장에 들이기 전에 고칠 것");
+  const rows = [
+    ["높이 사각", "2D LiDAR는 바닥 약 0.17m 한 평면만 본다", "깊이 카메라 융합"],
+    ["위치 누적 오차", "휠 odom 누적 → 시작 위치 재설정으로 보정", "SLAM 위치 보정"],
+    ["통신 두절", "ROS 1 로봇은 마지막 속도 유지 여부가 펌웨어 의존", "로봇 측 정지 감시 노드"],
+    ["보안", "rosbridge 인증 없음 → 시연망 분리 운용", "인증 · 암호화 · 망 분리"],
+    ["효과 실측", "정지 시간 단축(MTBI)은 아직 현장 측정 전", "파일럿 라인 계측"],
   ];
-  const cw = (W - 2 * M - 2 * 0.2) / 3;
-  limits.forEach(([n, head, txt, roadmap], k) => {
-    const x = M + k * (cw + 0.2), y = 1.65;
-    card(s, x, y, cw, 3.05);
-    s.addText(n, { x: x + 0.22, y: y + 0.22, w: 1, h: 0.25, fontFace: MONO, fontSize: 9, color: C.stone, charSpacing: 1.2, margin: 0, isTextBox: true });
-    s.addText(head, { x: x + 0.22, y: y + 0.55, w: cw - 0.44, h: 0.45, fontFace: SANS, fontSize: 16, color: C.obsidian, charSpacing: -0.6, margin: 0, isTextBox: true });
-    body(s, txt, x + 0.22, y + 1.15, cw - 0.44, 1.0, { size: 10, color: C.charcoal });
-    s.addShape(pres.shapes.LINE, { x: x + 0.22, y: y + 2.2, w: cw - 0.44, h: 0, line: { color: C.hair, width: 0.75 } });
-    s.addText("ROADMAP", { x: x + 0.22, y: y + 2.28, w: cw - 0.44, h: 0.18, fontFace: MONO, fontSize: 7, color: C.green, charSpacing: 0.8, margin: 0, isTextBox: true });
-    body(s, roadmap, x + 0.22, y + 2.48, cw - 0.44, 0.5, { size: 9, color: C.obsidian });
+  const cw = [1.7, 4.4, 2.8], y0 = 1.55, rh = 0.6;
+  card(s, M, y0, W - 2 * M, 0.38 + rows.length * rh + 0.05);
+  [["한계", 0], ["현재 상태", 1], ["보완 방법", 2]].forEach(([h, i]) => {
+    label(s, h, M + 0.18 + cw.slice(0, i).reduce((a, b) => a + b, 0), y0 + 0.1, cw[i], C.stone);
+  });
+  hline(s, M + 0.18, y0 + 0.36, W - 2 * M - 0.36);
+  rows.forEach((r, ri) => {
+    const y = y0 + 0.42 + ri * rh;
+    let x = M + 0.18;
+    r.forEach((c, ci) => {
+      text(s, c, x, y, cw[ci] - 0.15, rh - 0.1, { size: ci === 0 ? 11 : 10, bold: ci === 0, valign: "middle",
+        color: ci === 2 ? C.green : (ci === 0 ? C.obsidian : C.charcoal) });
+      x += cw[ci];
+    });
+    if (ri < rows.length - 1) hline(s, M + 0.18, y + rh - 0.05, W - 2 * M - 0.36);
   });
   footer(s, 9);
   addNotes(s, 9);
 }
 
-// ---------- 10. 시장 분석, 솔루션 비교 및 결론 ----------
+// ---------- 10. 발전계획 ② 기대효과 · 비즈니스모델 · 결론 ----------
 {
   const s = canvas(true);
-  eyebrow(s, "09 — Market & Impact", M, 0.45, C.smoke);
-  s.addText("시장 분석, 솔루션 비교 및 결론", { x: M, y: 0.72, w: W - 2 * M, h: 0.45, fontFace: SANS, fontSize: 24, color: C.white,
-    charSpacing: -1, margin: 0, isTextBox: true });
-
-  // 상단: 시장 지표 카드 3개
-  const mstats = [
-    ["$22B", "AGV·AMR 시장 2030년 전망 (AGV 연 18% · AMR 연 30%, LogisticsIQ 2024)"],
-    ["53%", "산업용 로봇 재해 중 끼임 (KOSHA 2011–2020)"],
-    ["$2.3M/h", "자동차 라인 비계획 정지 비용 최대치 (Siemens 2024)"],
+  header(s, "6 · Next — 기대효과 · 비즈니스모델", "0:30", "기존 AGV에 얹는 안전 개입 레이어", true);
+  const bm = [
+    ["01 · 개조 패키지", "기존 2D LiDAR AGV에 릴레이 + 관제·VR SW 설치. 기체 교체 없음."],
+    ["02 · 관제 구독", "로봇 대수 기준 관제·원격 개입 SW 구독, 정지 원인 로그 리포트."],
+    ["03 · 원격 개입 센터", "여러 현장의 멈춘 로봇을 한 관제석에서 VR로 복구하는 운영 서비스."],
   ];
-  const mcw = (W - 2 * M - 2 * 0.2) / 3;
-  mstats.forEach(([big, sub], i) => {
-    const x = M + i * (mcw + 0.2);
-    card(s, x, 1.25, mcw, 0.85, { dark: true, border: C.charcoal });
-    s.addText(big, { x: x + 0.15, y: 1.35, w: mcw - 0.3, h: 0.35, fontFace: SANS, fontSize: 18, color: C.white, bold: true, margin: 0, isTextBox: true });
-    s.addText(sub, { x: x + 0.15, y: 1.72, w: mcw - 0.3, h: 0.3, fontFace: SANS, fontSize: 8, color: C.ash, margin: 0, isTextBox: true });
+  const cw = cols(3);
+  bm.forEach(([k, v], i) => {
+    const x = M + i * (cw + GAP);
+    card(s, x, 1.55, cw, 1.3, { dark: true, border: C.charcoal });
+    label(s, k, x + 0.18, 1.68, cw - 0.36, C.smoke);
+    text(s, v, x + 0.18, 1.98, cw - 0.36, 0.8, { size: 10, color: C.white });
   });
+  text(s, "구상 단계 · 가격·매출 수치는 파일럿 이후 산정", M, 2.92, 6, 0.2, { mono: true, size: 7, color: C.smoke, cs: 0.4 });
 
-  // 중단: 3사 경쟁 비교표
-  const tableY = 2.25;
-  card(s, M, tableY, W - 2 * M, 2.1, { dark: true, border: C.charcoal });
-  const rows = [
-    ["비교 항목", "기존 보급형 AGV", "고가 완전자율 AMR", "본 제안 Physical AI (VR Twin)"],
-    ["도입 방식", "기체 단위 도입", "고가 센서 기체 신규 도입", "기존 기체 + 소프트웨어 (2D LiDAR·카메라)"],
-    ["정지 복구", "관리자 현장 출동", "자체 재탐색 (복잡 환경 교착 가능)", "관제석에서 VR 원격 개입"],
-    ["안전 메커니즘", "단순 범퍼/2D E-STOP (정지 후 수동 복구)", "3D 센서 자율 판단 (센서 오인 위험)", "정지 우선 인터록 + 인간 최종 승인"],
-  ];
-  rows.forEach((r, ri) => {
-    const ry = tableY + 0.12 + ri * 0.48;
-    const isHeader = ri === 0;
-    r.forEach((cell, ci) => {
-      const cx = M + 0.15 + (ci === 0 ? 0 : 1.4 + (ci - 1) * 2.45);
-      const cw = ci === 0 ? 1.3 : 2.35;
-      const highlight = ci === 3;
-      s.addText(cell, { x: cx, y: ry, w: cw, h: 0.35, fontFace: isHeader ? MONO : SANS, fontSize: isHeader ? 8 : (highlight ? 9.5 : 8.5),
-        color: isHeader ? C.smoke : (highlight ? C.green : (ci === 0 ? C.ash : C.white)), bold: highlight || isHeader, margin: 0, valign: "middle", isTextBox: true });
-    });
-    if (ri < rows.length - 1) s.addShape(pres.shapes.LINE, { x: M + 0.15, y: ry + 0.44, w: W - 2 * M - 0.3, h: 0, line: { color: C.charcoal, width: 0.5 } });
-  });
+  const ew = cols(2);
+  card(s, M, 3.22, ew, 1.15, { dark: true, border: C.charcoal });
+  label(s, "시장", M + 0.18, 3.32, ew - 0.36, C.smoke);
+  text(s, "$22B", M + 0.18, 3.55, 1.3, 0.45, { size: 22, bold: true, color: C.white, valign: "middle" });
+  text(s, "AGV·AMR 2030 전망\nLogisticsIQ 2024", M + 1.5, 3.58, ew - 1.7, 0.6, { size: 9, color: C.ash });
+  const ex = M + ew + GAP;
+  card(s, ex, 3.22, ew, 1.15, { dark: true, border: C.charcoal });
+  label(s, "기대효과", ex + 0.18, 3.32, ew - 0.36, C.smoke);
+  text(s, "• 협착 위험 구간에서 로봇이 먼저 멈춤\n• 멈춘 로봇 원격 복구로 통로 정체 감소\n• 판단 근거 기록 → 사고 원인 추적", ex + 0.18, 3.55, ew - 0.36, 0.8, { size: 9.5, color: C.white, lh: 1.25 });
 
-  // 하단 맺음말
-  s.addText("▲  로봇은 멈추고 알리고, 판단은 사람이 내린다 — 완전 무인의 환상 대신, 가장 안전하고 현실적인 피지컬 AI.", {
-    x: M, y: 4.5, w: W - 2 * M, h: 0.32, fontFace: SANS, fontSize: 11, color: C.white, bold: true, margin: 0, isTextBox: true
-  });
-
+  text(s, "▲  로봇은 멈추고 알리고, 판단은 사람이 내린다.", M, 4.55, W - 2 * M, 0.32, { size: 13, bold: true, color: C.white, valign: "middle" });
   footer(s, 10, true);
   addNotes(s, 10);
 }

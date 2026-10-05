@@ -37,8 +37,14 @@ namespace PhysicalAI.VR
         public float pivotArcWidth = 0.05f;
         private const int PivotArcSegments = 24;
 
+        [Header("표시 조건")]
+        [Tooltip("관제 맵(God-View) 경로 띠는 인터록(정지·알림) 중인 로봇만 표시. 콕핏은 영상 위 경로로 항상 표시")]
+        public bool pathOnlyOnInterlock = true;
+
         [Header("LiDAR 점")]
-        public bool showScan = true;
+        [Tooltip("관제 맵에 LiDAR 점 표시 (배치·정합 점검용, 기본 끔)")]
+        public bool showScan = false;
+        public KeyCode toggleScanKey = KeyCode.F4;
         public float scanPointSize = 0.05f;
         public float scanHeight = 0.12f;
         public Color scanColor = new Color(0.55f, 0.85f, 1.0f);
@@ -79,6 +85,11 @@ namespace PhysicalAI.VR
         }
 
         private void OnEnable() => Subscribe();
+
+        private void Update()
+        {
+            if (Input.GetKeyDown(toggleScanKey)) showScan = !showScan;   // 다음 텔레메트리에 반영
+        }
 
         private void OnDisable()
         {
@@ -142,6 +153,11 @@ namespace PhysicalAI.VR
         {
             if (forceTestPattern || agentManager == null) return;
             PathData path = agentManager.LatestPath;
+            if (pathOnlyOnInterlock && path != null)
+            {
+                string owner = string.IsNullOrEmpty(path.robot) ? "tb1" : path.robot;
+                if (!agentManager.RobotAlert(owner)) path = null;   // 정상 주행 중엔 띠 숨김 (아래 SetLine이 null → 0점)
+            }
             Color rec = LevelColor(path?.recommended_level);
             SetLine(_recommended, path?.recommended, 0, PointCount(path?.recommended), recommendedWidth, rec);
             SetLine(_predicted, path?.predicted, 0, PointCount(path?.predicted), predictedWidth,

@@ -116,7 +116,7 @@ function addNotes(slide, n) { if (notes[n]) slide.addNotes(notes[n]); }
   const s = pres.addSlide(); s.background = { color: C.white };
   title(s, "03 SOLUTION", "솔루션: 정지 우선 + VR 원격 개입");
   const steps = [
-    ["STOP", C.red, "위험하면 멈춘다", "LiDAR 전방 0.35m · 로봇 간 1.0m · 비전 검출 → 즉시 속도 0. 보이지 않는 뒤로 스스로 물러나지 않는다."],
+    ["STOP", C.red, "위험하면 멈춘다", "LiDAR 전방 0.35m · 로봇 간 0.3m · 비전 검출 → 즉시 속도 0. 보이지 않는 뒤로 스스로 물러나지 않는다."],
     ["NOTIFY", C.slate, "원인·탈출 방향 표시", "정지 원인과 360° LiDAR로 계산한 탈출 경로를 카메라 화면·관제 지도·사이드바에 동시에 띄운다."],
     ["TAKE OVER", C.green, "사람이 VR로 빼낸다", "관제 맵 클릭 → 그 로봇 콕핏으로 즉시 전환(그 로봇만 MANUAL) → 그립 데드맨 + 양손 스틱으로 빼낸 뒤 AUTO 재개."],
   ];
@@ -170,7 +170,7 @@ function addNotes(slide, n) { if (notes[n]) slide.addNotes(notes[n]); }
   const s = pres.addSlide(); s.background = { color: C.white };
   title(s, "06 ALGORITHM", "핵심 알고리즘", C.green);
   const steps = [
-    ["1", "충돌 가드", "전방 0.35m 전진·후방 0.20m 후진 차단, 로봇 간 1.0m"],
+    ["1", "충돌 가드", "전방 0.35m 전진·후방 0.20m 후진 차단, 로봇 간 0.3m"],
     ["2", "탈출 방향", "5° 72방향, 로봇 폭 회랑 d(h), argmax[d − 0.25|h|]"],
     ["3", "궤적·선회 추천", "곡률 25개 원호 충돌 검사, 막히면 제자리 선회"],
     ["4", "VR 텔레옵", "그립 데드맨, 좌 선회·우 직진/후진, 방향 진동"],
@@ -200,7 +200,7 @@ function addNotes(slide, n) { if (notes[n]) slide.addNotes(notes[n]); }
 {
   const s = pres.addSlide(); s.background = { color: C.white };
   title(s, "07 RESULT", "정량 실증: Test Case 5종");
-  const stats = [["73/73", "자동화 시험 통과", "가짜 rosbridge E2E"], ["2대", "실물 TurtleBot3", "ROS 1 + ROS 2 동시"], ["20 Hz", "제어·텔레메트리", "영상 15.7 fps 실측"]];
+  const stats = [["78/78", "자동화 시험 통과", "가짜 rosbridge E2E"], ["2대", "실물 TurtleBot3", "ROS 1 + ROS 2 동시"], ["20 Hz", "제어·텔레메트리", "영상 15.7 fps 실측"]];
   stats.forEach(([big, label, sub], k) => {
     const x = M + k * 3.05;
     s.addText(big, { x, y: 1.4, w: 2.85, h: 0.6, fontFace: MONO, fontSize: 30, bold: true, color: k === 0 ? C.green : C.ink, margin: 0, isTextBox: true });
@@ -209,7 +209,7 @@ function addNotes(slide, n) { if (notes[n]) slide.addNotes(notes[n]); }
   const rows = [
     ["TC", "시나리오", "근거 (자동 시험 / 실물)", "결과"],
     ["TC-01", "전방 0.35m 전진 차단 + STOP 경고", "0.3m → STOP·reason, 전진 0 / 실물 차단 확인", "PASS"],
-    ["TC-02", "타 AGV 1.0m 회피", "2대 AUTO 만남 → 둘 다 정지·비켜주기 (자동)", "PASS"],
+    ["TC-02", "타 AGV 0.3m 회피", "2대 AUTO 만남 → 둘 다 정지·비켜주기 (자동)", "PASS"],
     ["TC-03", "God-View ↔ VR 콕핏", "클릭 즉시 전환 / Quest 표출 확인", "PASS"],
     ["TC-04", "Quest·키보드 → 실물 바퀴", "0.15 m/s 제한·워치독 / Quest·WASD 구동", "PASS"],
     ["TC-05", "AUTO 봉착 정지 → 수동 후진 탈출", "STUCK·자동 재개 없음·입력 시 MANUAL", "PASS"],
@@ -255,7 +255,7 @@ function addNotes(slide, n) { if (notes[n]) slide.addNotes(notes[n]); }
     s.addText(items.map((t, k) => ({ text: t, options: { bullet: true, breakLine: k < items.length - 1, paraSpaceAfter: 5 } })),
       { x, y: 2.05, w: 4.2, h: 1.7, fontFace: F, fontSize: 12, color: C.onDark, margin: 0, valign: "top", isTextBox: true });
   };
-  col(M, "대회 기간 8일 성과", ["실물 2대(ROS 1·2) 원격 관제·VR 개입", "정지 우선 안전 게이트 + LiDAR 경로", "E2E 자동 시험 73항목 통과"]);
+  col(M, "대회 기간 8일 성과", ["실물 2대(ROS 1·2) 원격 관제·VR 개입", "정지 우선 안전 게이트 + LiDAR 경로", "E2E 자동 시험 78항목 통과"]);
   col(5.3, "현장 적용 전 보완", ["비전 인터록 현장 검증·높이 사각 보완", "SLAM 위치 보정, 로봇 측 정지 감시", "정지 시간 단축 효과 현장 측정"]);
   s.addText("로봇은 멈추고 알리고, 판단은 사람이 화면 근거를 보고 내린다.", { x: M, y: 4.25, w: W - 2 * M, h: 0.5, fontFace: F, fontSize: 17,
     bold: true, color: C.white, margin: 0, isTextBox: true });

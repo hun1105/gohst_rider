@@ -46,3 +46,15 @@ hardware_firmware/*.zip
 
 # 패키징 비밀정보 검사용 로컬 패턴 (실제 비밀번호 포함)
 tools/secret_patterns.local.txt
+
+# 대회 공식 운영규정 원본 (배포 자료, 소스 ZIP 제외)
+*운영규정*.docx
+
+# 시연 영상 녹화본 (용량 큼, 제출은 링크/ZIP로)
+video/*
+!video/NARRATION.md
+
+# 운영규정 수정본(배포 자료), 외부 디자인 참고 원문, 제출용 최종 사본(별도 제출)
+03-1_*.docx
+DESIGN (perplexity).md
+final/

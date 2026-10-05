@@ -7,8 +7,13 @@
     "spec": "node build_report.js ../../docs TECH_SPEC_1P.md \"AI Agent 기술설명서 - MetaQuest VR 피지컬 AI AGV 디지털 트윈\"",
     "deck": "node build_deck.js ../../docs",
     "deck-vercel": "node build_deck_vercel.js ../../docs",
+    "deck-pitch": "node build_deck_pitch.js ../../docs",
+    "deck-perplexity": "node build_deck_perplexity.js ../../docs",
+    "deck-swiss": "node build_deck_swiss.js ../../docs",
+    "panel": "node build_panel.js ../../docs",
+    "panel-b4": "node build_panel_b4.js ../../docs",
     "disclosure": "node build_report.js ../../docs SOURCE_AI_DISCLOSURE.md \"출처·AI 활용 신고서 - VR 원격 개입형 AGV 협착 방지 디지털 트윈\"",
-    "all": "npm run report && npm run spec && npm run deck && npm run deck-vercel && npm run disclosure"
+    "all": "npm run report && npm run spec && npm run deck-vercel && npm run deck-pitch && npm run deck-perplexity && npm run deck-swiss && npm run panel && npm run panel-b4 && npm run disclosure"
   },
   "dependencies": {
     "docx": "^9.8.1",

@@ -15,7 +15,7 @@ from websockets.server import serve
 
 from ros2_multi_turtlebot_relay import (
     AUTO_AVOID_SPEED, AUTO_AVOID_TIMEOUT_S, AUTO_CRUISE_SPEED, AUTO_GEOFENCE_RADIUS_M,
-    AUTO_GEOFENCE_REENTER_RATIO, AUTO_MAX_TURN,
+    AUTO_GEOFENCE_REENTER_RATIO, AUTO_MAX_TURN, AGV_SAFETY_RADIUS_M,
     LIDAR_REAR_GUARD_M, REAL_MAX_LINEAR_DEFAULT, SPAWN_POSES, MultiTurtleBotRelay, odom_to_unity,
 )
 from escape_planner import ScanData, _valid_points, plan_escape
@@ -24,7 +24,7 @@ from rosbridge_link import RosbridgeLink, sector_min_range
 
 TB1_PORT, TB2_PORT, RELAY_PORT = 19191, 19192, 19193
 TICK_S = 0.05
-TB2_ODOM = (-2.0, 0.2, math.pi / 2)   # ROS x, y, yaw — 스폰 뒤쪽 2m: tb1 단독 시험 중 AGV 간 1.0m 인터록 배제
+TB2_ODOM = (-2.0, 0.2, math.pi / 2)   # ROS x, y, yaw — 스폰 뒤쪽 2m: tb1 단독 시험 중 AGV 간 만남 인터록 배제
 
 
 class FakeRosbridge:
@@ -150,7 +150,7 @@ async def main():
         "tb1": RosbridgeLink("tb1", f"ws://127.0.0.1:{TB1_PORT}", 1),
         "tb2": RosbridgeLink("tb2", f"ws://127.0.0.1:{TB2_PORT}", 2),
     }
-    relay = MultiTurtleBotRelay(use_ai=False, links=links)
+    relay = MultiTurtleBotRelay(use_ai=False, links=links, auto_steer=True)   # [9] 회피·복귀 검증용, 직진 전용은 [9f]
     relay_task = asyncio.create_task(relay.run(host="127.0.0.1", port=RELAY_PORT))
     await asyncio.sleep(1.0)
 
@@ -323,6 +323,27 @@ async def main():
         await auto_cmd(True)   # 연결 해제 시 해제되는지 [8]에서 확인
 
 
+        print("[9f] 직진 전용 AUTO (T-036 기본값): 전방 0.5m에서도 조향 없이 직진, 0.3m에서 STUCK")
+        await ws.send(json.dumps({"cmd": "STOP", "robot": "tb1"}))
+        relay.auto_steer = False
+        tb1.front, tb1.scan_override = 2.0, None
+        await asyncio.sleep(0.3)
+        await auto_cmd(True)
+        tb1.front = 0.5
+        await asyncio.sleep(0.3)
+        t = await telemetry(ws)
+        cmds = await last_cmds()
+        check(t["auto_state"] == "CRUISE" and cmds and all(abs(l - AUTO_CRUISE_SPEED) < 1e-6 and a == 0.0 for l, a in cmds),
+              f"전방 0.5m → {t['auto_state']}, 조향 0 직진")
+        tb1.front = 0.3
+        await asyncio.sleep(0.4)
+        t = await telemetry(ws)
+        check(t["auto_state"] == "STUCK", f"전방 0.3m → {t['auto_state']} (안전 가드는 유지)")
+        tb1.front = 2.0
+        await ws.send(json.dumps({"cmd": "STOP", "robot": "tb1"}))
+        relay.auto_steer = True
+        await asyncio.sleep(0.3)
+
         print("[10] 경로 추천·LiDAR 점 텔레메트리 + 위치 원점 재설정 (T-019)")
         await ws.send(json.dumps({"cmd": "STOP", "robot": "tb1"}))   # MANUAL·정지 상태에서 시작
         tb1.odom = (0.0, 0.0, 0.0)
@@ -379,26 +400,26 @@ async def main():
         await auto_cmd(True)   # [8]에서 연결 해제 시 AUTO 해제 확인용
 
 
-        print("[11] TC-02 tb1↔tb2 안전거리 1.0m 인터록")
+        print(f"[11] TC-02 tb1↔tb2 안전거리 {AGV_SAFETY_RADIUS_M}m 인터록")
         await ws.send(json.dumps({"cmd": "STOP", "robot": "tb1"}))
         tb1.front, tb1.rear, tb1.scan_override = 2.0, 2.0, None   # LiDAR 원인 배제 → 거리 인터록만 검사
         await asyncio.sleep(0.3)
         t = await telemetry(ws)
         tx, tz = t["tb1"]["x"], t["tb1"]["z"]
-        await ws.send(json.dumps({"cmd": "RESET_POSE", "robot": "tb2", "x": tx, "z": tz + 0.8, "yaw": 180.0}))
+        await ws.send(json.dumps({"cmd": "RESET_POSE", "robot": "tb2", "x": tx, "z": tz + AGV_SAFETY_RADIUS_M - 0.1, "yaw": 180.0}))
         await asyncio.sleep(0.4)
         t = await telemetry(ws)
         d = math.hypot(t["tb2"]["x"] - t["tb1"]["x"], t["tb2"]["z"] - t["tb1"]["z"])
         check(t["safety"]["interlock"] and "TB2" in t["safety"]["reason"], f"거리 {d:.2f}m → 인터록 '{t['safety']['reason']}'")
         tb1.cmd_vel.clear()
         await drive(ws, "tb1", 0.1, 0.0, 0.4)
-        check(all(l == 0.0 for l, _ in tb1.cmd_vel), "1.0m 이내 → tb1 전진 차단")
+        check(all(l == 0.0 for l, _ in tb1.cmd_vel), f"{AGV_SAFETY_RADIUS_M}m 이내 → tb1 전진 차단")
         await ws.send(json.dumps({"cmd": "RESET_POSE", "robot": "tb2", "x": tx, "z": tz + 3.0, "yaw": 180.0}))
         await asyncio.sleep(0.4)
         t = await telemetry(ws)
         check(not t["safety"]["interlock"], "3.0m로 벌어짐 → 인터록 해제")
 
-        print("[12] 2대 AUTO → 만남 1.0m → 둘 다 정지 → 한 대 콕핏 진입·비켜주기 → 재개 (T-025)")
+        print(f"[12] 2대 AUTO → 만남 {AGV_SAFETY_RADIUS_M}m → 둘 다 정지 → 한 대 콕핏 진입·비켜주기 → 재개 (T-025)")
         async def auto_for(robot, enable=True):
             await ws.send(json.dumps({"cmd": "AUTO", "robot": robot, "enable": enable}))
             await asyncio.sleep(0.3)
@@ -419,11 +440,11 @@ async def main():
         await asyncio.sleep(0.6)   # tb2는 조종 권한 없음 → AUTO만으로 주행 (워치독 미적용)
         check(tb2.cmd_vel and all(abs(l - AUTO_CRUISE_SPEED) < 1e-6 for l, _ in tb2.cmd_vel), "권한 없는 tb2도 AUTO 직진 송신")
 
-        await ws.send(json.dumps({"cmd": "RESET_POSE", "robot": "tb2", "x": 0.0, "z": 0.8, "yaw": 180.0}))   # 마주 보고 0.8m
+        await ws.send(json.dumps({"cmd": "RESET_POSE", "robot": "tb2", "x": 0.0, "z": AGV_SAFETY_RADIUS_M - 0.1, "yaw": 180.0}))   # 마주 보고 기준-0.1m
         await asyncio.sleep(0.4)
         t = await telemetry(ws)
         check(t["tb1"]["auto_state"] == "STUCK" and t["tb2"]["auto_state"] == "STUCK",
-              f"만남 0.8m → 둘 다 STUCK ({t['tb1']['auto_state']}/{t['tb2']['auto_state']})")
+              f"만남 {AGV_SAFETY_RADIUS_M - 0.1:.1f}m → 둘 다 STUCK ({t['tb1']['auto_state']}/{t['tb2']['auto_state']})")
         check(t["tb1"]["alert"] and t["tb2"]["alert"] and "TB1" in t["tb2"]["stop_reason"],
               f"양쪽 알림: tb2 '{t['tb2']['stop_reason']}'")
         tb1.cmd_vel.clear(); tb2.cmd_vel.clear()
@@ -438,7 +459,7 @@ async def main():
               "tb2 콕핏 진입 → tb2만 MANUAL, tb1은 STUCK 유지")
         tb2.cmd_vel.clear()
         await drive(ws, "tb2", 0.1, 0.0, 0.4)
-        check(all(l == 0.0 for l, _ in tb2.cmd_vel), "1.0m 안: tb2 전진 차단")
+        check(all(l == 0.0 for l, _ in tb2.cmd_vel), f"{AGV_SAFETY_RADIUS_M}m 안: tb2 전진 차단")
         tb2.cmd_vel.clear()
         await drive(ws, "tb2", -0.1, 0.0, 0.4)
         check(any(l < 0 for l, _ in tb2.cmd_vel), "후진으로 비켜주기 허용")
@@ -458,7 +479,21 @@ async def main():
         await asyncio.sleep(0.3)
         t = await telemetry(ws)
         check(t["tb1"]["mode"] == "MANUAL" and t["tb2"]["mode"] == "AUTO", "tb1 콕핏 진입 → tb1만 MANUAL")
-        await auto_for("tb2", False)
+        await ws.send(json.dumps({"cmd": "STOP", "robot": "tb1"}))
+        await ws.send(json.dumps({"cmd": "STOP", "robot": "tb2"}))
+        await asyncio.sleep(0.2)
+        # T-035: Shift+P 일괄 재설정 → 첫 AUTO(reset_pose) 시 스폰 기준
+        await ws.send(json.dumps({"cmd": "RESET_POSE", "robot": "all"}))
+        await asyncio.sleep(0.3)
+        t = await telemetry(ws)
+        ok_all = all(abs(t[r]["x"] - SPAWN_POSES[r][0]) < 0.02 and abs(t[r]["z"] - SPAWN_POSES[r][1]) < 0.02 for r in ("tb1", "tb2"))
+        check(ok_all, f"RESET_POSE all → 두 대 스폰 포즈 ({t['tb1']['z']}, {t['tb2']['z']})")
+        await auto_for("all")   # T-031: R / 퀘스트 Y = 두 대 동시
+        t = await telemetry(ws)
+        check(t["tb1"]["mode"] == "AUTO" and t["tb2"]["mode"] == "AUTO", "AUTO all → 두 대 모두 AUTO")
+        await auto_for("all", False)
+        t = await telemetry(ws)
+        check(t["tb1"]["mode"] == "MANUAL" and t["tb2"]["mode"] == "MANUAL", "AUTO all false → 두 대 모두 MANUAL")
         await ws.send(json.dumps({"cmd": "SELECT_ROBOT", "robot": "tb1"}))
         await asyncio.sleep(0.2)
         await auto_cmd(True)   # [8]에서 연결 해제 시 AUTO 해제 확인용

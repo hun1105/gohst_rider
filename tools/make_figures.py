@@ -68,7 +68,7 @@ def fig_architecture():
     ax.add_patch(FancyBboxPatch((5.35, 1.0), 5.3, 6.4, boxstyle="round,pad=0.02,rounding_size=0.08", fc=DARK, ec=DARK))
     ax.text(5.5, 7.22, "AI 릴레이 에이전트 (Python asyncio)", fontsize=13, weight="bold", color=WHITE, va="top")
     gates = [("조종 권한 (SELECT_ROBOT)", SLATE), ("장애물 정지·알림 (STOP)", RED), ("AUTO 상태머신", SLATE),
-             ("워치독 0.5s", SLATE), ("로봇 간 거리 1.0m", SLATE), ("속도 상한 0.15 m/s", SLATE),
+             ("워치독 0.5s", SLATE), ("로봇 간 거리 0.3m", SLATE), ("속도 상한 0.15 m/s", SLATE),
              ("LiDAR 가드 전방 0.35 / 후방 0.20m", RED), ("통신 두절 정지 (odom 0.5s)", SLATE)]
     gx, gy0, gw, gh = 5.55, 6.3, 2.75, 0.5
     ax.text(gx, gy0 + 0.12, "안전 게이트 (20 Hz, 위→아래)", fontsize=9.5, color="#C9D0D8", va="bottom")

@@ -55,13 +55,13 @@ if (Test-Path -LiteralPath $LocalSecretFile) {
 $Placeholders = @("[팀명]", "[팀장명]", "[팀원명]", "[발표자]")
 
 $Deliverables = [ordered]@{
-    "2_완료보고서"           = @("docs/REPORT_5P.docx")
-    "3_기술명세서_소스코드"   = @("docs/TECH_SPEC_1P.docx")
-    "5_발표자료"             = @("docs/PRESENTATION_10SLIDES_VERCEL.pptx")
-    "별지2_출처AI활용신고서"  = @("docs/SOURCE_AI_DISCLOSURE.docx")
+    "2_완료보고서"           = @("final/01_개발완료보고서_REPORT_5P.docx")
+    "3_기술명세서_소스코드"   = @("final/02_기술설명서_및_소스코드정보_TECH_SPEC_1P.docx")
+    "5_발표자료"             = @("final/04_발표자료_PRESENTATION_10SLIDES.pptx")
+    "별지2_출처AI활용신고서"  = @("final/06_출처_AI활용신고서_SOURCE_AI_DISCLOSURE.docx")
 }
 $References = @("docs/REPORT_5P.md", "docs/TECH_SPEC_1P.md", "docs/PRESENTATION_10SLIDES.md",
-                "docs/VIDEO_SCRIPT_3MIN.md", "docs/SOURCE_AI_DISCLOSURE.md", "docs/PROTOCOL.md")
+                "docs/VIDEO_SCRIPT_3MIN.md", "docs/SOURCE_AI_DISCLOSURE.md", "docs/PROTOCOL.md", "docs/CHECKLIST.md")
 
 $Stamp = Get-Date -Format "yyyyMMdd_HHmmss"
 $Stage = Join-Path $env:TEMP "agv_pkg_$Stamp"          # OneDrive 긴 경로 회피용 스테이징
